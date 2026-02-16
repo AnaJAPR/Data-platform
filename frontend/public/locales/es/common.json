@@ -47,6 +47,55 @@
     "pagination": {
       "showing": "Mostrando {{start}} a {{end}} de {{total}}",
       "page": "Página {{current}} de {{total}}"
+    },
+    "overview": {
+      "title": "Panel Mosqlimate",
+      "subtitle": "Explore, compare y evalúe pronósticos generados por diferentes modelos de predicción registrados en la plataforma Mosqlimate.",
+      "overview": "Descripción general",
+
+      "general": {
+        "title": "General",
+        "description": "Área general de exploración del panel, donde es posible visualizar y comparar pronósticos producidos por diferentes modelos disponibles en la plataforma.",
+        "what_is_displayed": "Qué se muestra: ",
+        "what_is_displayed_description": "Pronósticos, datos observados y métricas de error que comparan valores predichos con datos observados.",
+        "models": "Modelos: ",
+        "models_description": "todos los modelos registrados en Mosqlimate.",
+        "diseases": "Enfermedades: ",
+        "diseases_description": "dengue, Zika y chikungunya (cuando estén disponibles).",
+        "scale": "Escala: ",
+        "scale_description": "municipal, estatal o nacional, según los modelos enviados.",
+        "goal": "Objetivo: ",
+        "goal_description": "comparar el rendimiento y el comportamiento de los modelos utilizando las siguientes métricas de error: Error Absoluto Medio (MAE), Error Cuadrático Medio (MSE), Puntuación de Probabilidad Clasificada Continua (CRPS), puntuación de intervalo y Puntuación de Intervalo Ponderada (WIS).",
+        "typical_questions": "Preguntas típicas: ",
+        "questions": [
+          "¿Qué tan cercanas están las predicciones a los datos observados?",
+          "¿Cómo varía el comportamiento entre regiones?"
+        ],
+        "button": "Panel General"
+      },
+
+      "imdc": {
+        "title": "IMDC",
+        "description": "Visualización dedicada a los pronósticos producidos en el contexto del ",
+        "link_name": "Desafío de Dengue InfoDengue–Mosqlimate",
+        "what_is_displayed": "Qué se muestra: ",
+        "what_is_displayed_description": "pronósticos de dengue enviados al IMDC.",
+        "models": "Modelos: ",
+        "models_description": "solo modelos participantes del desafío.",
+        "diseases": "Enfermedad: ",
+        "diseases_description": "dengue.",
+        "scale": "Escala: ",
+        "scale_description": "estatal.",
+        "goal": "Objetivo: ",
+        "goal_description": "evaluar y comparar los pronósticos del desafío utilizando las siguientes métricas de error: Error Absoluto Medio (MAE), Error Cuadrático Medio (MSE), Puntuación de Probabilidad Clasificada Continua (CRPS), puntuación de intervalo y Puntuación de Intervalo Ponderada (WIS).",
+        "typical_questions": "Preguntas típicas: ",
+        "questions": [
+          "¿Cómo se comparan los modelos del IMDC entre sí?",
+          "¿Qué pronósticos anticipan mejor los picos de casos?",
+          "¿Cómo se desempeñan los modelos a lo largo de la temporada?"
+        ],
+        "button": "Panel IMDC"
+      }
     }
   },
   "register_page": {
@@ -327,7 +376,7 @@
       "araujo_rsos_2025": "Araujo, E. C., Codeço, C. T., Loch, S., Vacaro, L. B., Freitas, L. P., Lana, R. M., ... & Coelho, F. C. (2025). Large-scale epidemiological modelling: scanning for mosquito-borne diseases spatio-temporal patterns in Brazil. Royal Society Open Science, 12(5), 241261.",
       "ganem_arxiv_2024": "Ganem, F., Vacaro, L. B., Araujo, E. C., Alves, L. D., Bastos, L., Carvalho, L. M., ... & Coelho, F. C. (2024). Mosqlimate: a platform to providing automatable access to data and forecasting models for arbovirus disease. arXiv preprint arXiv:2410.18945.",
       "bastos_arxiv_2024": "Bastos, M. M., Carvalho, L. M., Araujo, E. C., & Coelho, F. C. (2024). Long-term predictive models for mosquito borne diseases: a narrative review. arXiv preprint arXiv:2411.13680.",
-      "araujo_medrxiv_2025": "Araujo, E. C., Carvalho, L. M., Ganem, F., Vacaro, L. B., Bastos, L. S., Freitas, L. P., ... & Coelho, F. C. (2025). Leveraging probabilistic forecasts for dengue preparedness and control: the 2024 Dengue Forecasting Sprint in Brazil. medRxiv, 2025-05.",
+      "araujo_pnas_2026": "ARAUJO, E. C.; CARVALHO, L. M.; GANEM, F.; VACARO, L. B.; BASTOS, L. S.; FREITAS, L. P.; et al.; COELHO, F. C. Leveraging probabilistic forecasts for dengue preparedness and control: The 2024 Dengue Forecasting Sprint in Brazil. Proceedings of the National Academy of Sciences of the United States of America, v. 123, n. 7, p. e2508989123, 2026.",
       "freitas_medrxiv_2025": "Picinini Freitas, L., Ferreira, D. A. D. C., Martins Lana, R., Câmara, D. C. P., Portella, T. P., Carvalho, M. S., ... & Bastos, L. S. (2025). A statistical model for forecasting probabilistic epidemic bands for dengue cases in Brazil. medRxiv, 2025-06.",
       "santos_thesis_2024": "Santos, J. P. S. dos. (2024). Analyzing dengue epidemic dynamics using physics informed neural networks [Doctoral dissertation, Fundação Getulio Vargas]. Fundação Getulio Vargas EMAp.",
       "dataset_egg": "Aedes aegypti Egg Image Data Set",
@@ -407,17 +456,18 @@
     "data": {
       "title": "Explore nuestros datos",
       "cases_title": "Casos",
-      "cases_desc": "Datos semanales sobre <b>dengue</b>, <b>zika</b> y <b>chikungunya</b> para todos los municipios brasileños, con el fin de seguir tendencias y estacionalidad para el control de enfermedades.",
+      "cases_desc": "Datos semanales sobre <b>dengue</b>, <b>Zika</b> y <b>chikungunya</b> para todos los municipios brasileños, con el fin de seguir tendencias y estacionalidad para el control de enfermedades.",
       "climate_title": "Clima",
       "climate_desc": "Variables climáticas diarias extraídas de datos de reanálisis satelital, como <b>temperatura</b> y <b>precipitación</b>, para predecir la dinámica de proliferación de los mosquitos vectores.",
       "mosquito_title": "Mosquito",
       "mosquito_desc": "Datos del proyecto <b>Contaovos</b>, obtenidos mediante trampas para huevos de Aedes aegypti para monitorear la densidad vectorial en tiempo real en Brasil.",
       "epi_title": "Epi-Scanner",
-      "epi_desc": "Analiza y presenta datos actualizados de la <b>expansión de dengue, zika y chikungunya</b> en el territorio nacional con foco en patrones espaciales y temporales de transmisión."
+      "epi_desc": "Analiza y presenta datos actualizados de la <b>expansión de dengue, Zika y chikungunya</b> en el territorio nacional con foco en patrones espaciales y temporales de transmisión."
     },
     "models": {
       "title": "Analice nuestros modelos",
-      "description": "Mosqlimate pone a disposición y registra modelos de pronóstico para dengue, chikungunya y zika, utilizando datos climáticos y epidemiológicos oficiales de dominio público. Estos modelos permiten comparar metodologías a través de paneles, mejorar pronósticos e identificar señales de expansión o brotes, incluyendo nuevos arbovirus, integrándose al sistema de alerta temprana Infodengue."
+      "description": "Mosqlimate pone a disposición y registra modelos de pronóstico para dengue, chikungunya y Zika, utilizando datos climáticos y epidemiológicos oficiales de dominio público. Estos modelos permiten comparar metodologías a través de paneles, mejorar pronósticos e identificar señales de expansión o brotes, incluyendo nuevos arbovirus, integrándose al sistema de alerta temprana Infodengue.",
+      "image_message": "Haga clic para ser redirigido a la pestaña Modelos."
     },
     "differentials": {
       "title": "Descubra los diferenciales de Mosqlimate",
@@ -433,7 +483,8 @@
       "community_desc": "Realiza eventos destacados como la E-Vigilancia bianual y el Sprint anual, además de seminarios continuos."
     },
     "team": {
-      "title": "Conozca a nuestro equipo"
+      "title": "Conozca a nuestro equipo",
+      "image_message": "Haga clic para ser redirigido a la pestaña 'Sobre Nosotros'."
     }
   },
   "model_predictions": {

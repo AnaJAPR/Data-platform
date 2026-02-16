@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface Level {
   id: string;
@@ -35,6 +36,7 @@ const LEVEL_TO_INT: Record<string, string> = {
 };
 
 export function DashboardSidebar({ sections }: SidebarProps) {
+  const { t } = useTranslation("common");
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isOpen, setIsOpen] = useState(true);
@@ -88,11 +90,6 @@ export function DashboardSidebar({ sections }: SidebarProps) {
     return effectiveCurrentSprint === targetSprintValue;
   };
 
-  const isCategoryActive = (categoryId: string, sectionId: string) => {
-    if (!pathname.includes(`/dashboard/${categoryId}`)) return false;
-    return isSectionActive(sectionId);
-  };
-
   const isLevelActive = (
     categoryId: string,
     levelSlug: string,
@@ -109,6 +106,11 @@ export function DashboardSidebar({ sections }: SidebarProps) {
     return currentLevel === targetLevel;
   };
 
+  const SECTION_LABEL_MAP: Record<string, string> = {
+    default: "dashboard.overview.general.title",
+    sprint: "dashboard.overview.imdc.title",
+  };
+
   return (
     <div
       className={`flex flex-col flex-shrink-0 min-h-screen bg-bg border-r border-border transition-all duration-300 ease-in-out ${isOpen ? "w-64" : "w-16"
@@ -119,7 +121,7 @@ export function DashboardSidebar({ sections }: SidebarProps) {
           className={`text-lg font-bold text-text whitespace-nowrap transition-opacity duration-200 ${isOpen ? "opacity-100" : "opacity-0 hidden"
             }`}
         >
-          Dashboard
+          {t("navbar.dashboard")}
         </h2>
 
         <button
@@ -138,17 +140,17 @@ export function DashboardSidebar({ sections }: SidebarProps) {
           <Link
             href="/dashboard"
             className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors whitespace-nowrap ${pathname === "/dashboard"
-                ? "bg-accent text-white"
-                : "hover:bg-primary/5 hover:text-text"
+              ? "bg-accent text-white"
+              : "hover:bg-primary/5 hover:text-text"
               }`}
           >
-            Overview
+            {t("dashboard.overview.overview")}
           </Link>
 
           {(sections || []).map((section) => (
             <div key={section.id} className="mb-6">
               <h3 className="text-sm font-bold text-text mb-3 uppercase tracking-wider border-b pb-1 whitespace-nowrap">
-                {section.label}
+                {t(SECTION_LABEL_MAP[section.id] ?? section.label)}
               </h3>
 
               {(section.categories || []).map((cat) => (
@@ -171,8 +173,8 @@ export function DashboardSidebar({ sections }: SidebarProps) {
                           adm_level: LEVEL_TO_INT[level.id] || "1",
                         })}
                         className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm whitespace-nowrap ${isLevelActive(cat.id, level.id, section.id)
-                            ? "bg-accent text-white font-medium"
-                            : "hover:bg-primary/5 hover:text-text"
+                          ? "bg-accent text-white font-medium"
+                          : "hover:bg-primary/5 hover:text-text"
                           }`}
                       >
                         {level.label}
