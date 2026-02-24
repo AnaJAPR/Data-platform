@@ -1,6 +1,27 @@
 Release Notes
 ---
 
+## [2.1.8](https://github.com/Mosqlimate-project/Data-platform/compare/2.1.7...2.1.8) (2026-02-24)
+
+
+### Bug Fixes
+
+* **dashboard:** improve dashboard logic & organize it (pt.2) ([#417](https://github.com/Mosqlimate-project/Data-platform/issues/417)) ([0509997](https://github.com/Mosqlimate-project/Data-platform/commit/050999711a8fa317bed76536344a23686910ad30))
+
+## [2.1.7](https://github.com/Mosqlimate-project/Data-platform/compare/2.1.6...2.1.7) (2026-02-24)
+
+
+### Bug Fixes
+
+* **dashboard:** improve dashboard logic & organize it ([#416](https://github.com/Mosqlimate-project/Data-platform/issues/416)) ([24d641a](https://github.com/Mosqlimate-project/Data-platform/commit/24d641abcaa3e5ad2c85783c8a5d2fba3d1277ff))
+
+## [2.1.6](https://github.com/Mosqlimate-project/Data-platform/compare/2.1.5...2.1.6) (2026-02-19)
+
+
+### Bug Fixes
+
+* **datastore:** include episcanner endpoint on datastore ([#410](https://github.com/Mosqlimate-project/Data-platform/issues/410)) ([7499c56](https://github.com/Mosqlimate-project/Data-platform/commit/7499c5640f464e003968c7afc2b4edc6c6d8ae8c))
+
 ## [2.1.5](https://github.com/Mosqlimate-project/Data-platform/compare/2.1.4...2.1.5) (2026-02-14)
 
 
