@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from datetime import timedelta
 from typing import Literal, Optional, TYPE_CHECKING
 import urllib.parse
 import base64
@@ -28,11 +29,10 @@ class OAuthProvider(ABC):
     def __init__(self, request: HttpRequest, extra_state: dict = {}):
         self.request = request
         self.extra_state = extra_state
-        if self.provider == "google":
-            self.redirect_url = self.redirect_url.replace(
-                "0.0.0.0",
-                "localhost",
-            )
+        self.redirect_url = self.redirect_url.replace(
+            "0.0.0.0",
+            "localhost",
+        )
 
     @classmethod
     def from_request(
@@ -70,6 +70,11 @@ class OAuthProvider(ABC):
     @abstractmethod
     def get_user_info(self, access_token: str, token_json: dict): ...
 
+    @abstractmethod
+    def get_readme(
+        self, repository: "Repository", access_token: Optional[str] = None
+    ) -> str: ...
+
     def get_token(self, code: str) -> str:
         payload = {
             "client_id": self.client_id,
@@ -93,11 +98,6 @@ class OAuthProvider(ABC):
             res.raise_for_status()
             return res.json()
 
-    @abstractmethod
-    def get_readme(
-        self, repository: "Repository", access_token: Optional[str] = None
-    ) -> str: ...
-
 
 class GoogleProvider(OAuthProvider):
     provider = "google"
@@ -115,7 +115,7 @@ class GoogleProvider(OAuthProvider):
         "https://www.googleapis.com/auth/userinfo.profile",
     ]
 
-    def get_auth_url(self) -> str:
+    def get_token(self, code: str) -> dict:
         flow = Flow.from_client_config(
             {
                 "web": {
@@ -129,13 +129,36 @@ class GoogleProvider(OAuthProvider):
             scopes=self.scopes,
         )
         flow.redirect_uri = self.redirect_url
-        auth_url, _ = flow.authorization_url(
-            prompt="consent",
-            access_type="offline",
-            state=self.state,
-            include_granted_scopes="true",
-        )
-        return auth_url
+
+        flow.fetch_token(code=code)
+
+        credentials = flow.credentials
+        return {
+            "access_token": credentials.token,
+            "refresh_token": credentials.refresh_token,
+            "expires_in": (
+                (
+                    credentials.expiry - timezone.now().replace(tzinfo=None)
+                ).total_seconds()
+                if credentials.expiry
+                else None
+            ),
+            "token_type": "Bearer",
+            "scope": " ".join(credentials.scopes),
+        }
+
+    def get_auth_url(self) -> str:
+        params = {
+            "client_id": self.client_id,
+            "redirect_uri": self.redirect_url,
+            "response_type": "code",
+            "scope": " ".join(self.scopes),
+            "state": self.state,
+            "access_type": "offline",
+            "prompt": "consent",
+            "include_granted_scopes": "true",
+        }
+        return f"{self.auth_url}?{urllib.parse.urlencode(params)}"
 
     def get_user_info(self, access_token: str, *args, **kwargs):
         with httpx.Client() as client:
@@ -179,52 +202,82 @@ class GithubProvider(OAuthProvider):
         return f"{self.auth_url}?{httpx.QueryParams(params)}"
 
     def get_user_info(self, access_token: str, token_json: dict):
-        with httpx.Client() as client:
-            resp = client.get(
-                self.user_url,
-                headers={
-                    "Authorization": f"Bearer {access_token}",
-                },
-            )
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
 
-        resp.raise_for_status()
-        return resp.json()
+        with httpx.Client() as client:
+            resp = client.get(self.user_url, headers=headers)
+            resp.raise_for_status()
+            data = resp.json()
+
+            if not data.get("email"):
+                emails_resp = client.get(
+                    "https://api.github.com/user/emails",
+                    headers=headers,
+                )
+
+                if emails_resp.status_code == 200:
+                    emails = emails_resp.json()
+
+                    primary_email = None
+                    for e in emails:
+                        if e.get("primary") and e.get("verified"):
+                            primary_email = e["email"]
+                            break
+
+                    if not primary_email and emails:
+                        primary_email = emails[0]["email"]
+
+                    data["email"] = primary_email
+
+        return data
 
     def has_installations(self, access_token: str) -> bool:
         headers = {
             "Authorization": f"Bearer {access_token}",
-            "Accept": "application/vnd.github.v3+json",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
         }
+
         with httpx.Client() as client:
             res = client.get(
                 "https://api.github.com/user/installations",
                 headers=headers,
                 params={"per_page": 1},
             )
+
             if res.status_code == 200:
                 installations = res.json().get("installations", [])
                 return len(installations) > 0
+
         return False
 
     def get_installation_token(self, installation_id: str):
         now = int(timezone.now().timestamp())
+
         payload = {
             "iat": now,
             "exp": now + (10 * 60),
             "iss": self.github_app_id,
         }
+
         encoded_jwt = jwt.encode(
-            payload, self.github_private_key.encode(), algorithm="RS256"
+            payload,
+            self.github_private_key.encode(),
+            algorithm="RS256",
         )
 
         headers = {
             "Authorization": f"Bearer {encoded_jwt}",
-            "Accept": "application/vnd.github.v3+json",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
         }
-        url = (
-            "https://api.github.com"
-            f"/app/installations/{installation_id}/access_tokens"
-        )
+
+        url = f"https://api.github.com/app/installations/{installation_id}/access_tokens"  # noqa
+
         with httpx.Client() as client:
             res = client.post(url, headers=headers)
             res.raise_for_status()
@@ -232,9 +285,11 @@ class GithubProvider(OAuthProvider):
 
     def get_user_repos(self, access_token: str):
         repos = []
+
         headers = {
             "Authorization": f"Bearer {access_token}",
-            "Accept": "application/vnd.github.v3+json",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
         }
 
         transport = httpx.HTTPTransport(retries=3)
@@ -245,29 +300,31 @@ class GithubProvider(OAuthProvider):
                 headers=headers,
                 params={"per_page": 100},
             )
+
             inst_resp.raise_for_status()
+
             installations = inst_resp.json().get("installations", [])
 
             for install in installations:
                 install_id = install["id"]
+
                 repo_resp = client.get(
-                    (
-                        "https://api.github.com/user/installations/"
-                        f"{install_id}/repositories"
-                    ),
+                    f"https://api.github.com/user/installations/{install_id}/repositories",  # noqa
                     headers=headers,
                     params={"per_page": 100},
                 )
 
                 if repo_resp.status_code == 200:
                     repos_data = repo_resp.json().get("repositories", [])
+
                     for r in repos_data:
                         if r.get("permissions", {}).get("admin") is True:
                             repos.append(
                                 {
                                     "id": str(r["id"]),
-                                    "name": r["full_name"],
-                                    "url": r["html_url"].strip("/"),
+                                    "name": r["name"],
+                                    "owner": r["owner"]["login"],
+                                    "url": r["html_url"].rstrip("/"),
                                     "private": r["private"],
                                     "provider": "github",
                                     "avatar_url": r["owner"]["avatar_url"],
@@ -292,6 +349,7 @@ class GithubProvider(OAuthProvider):
                 data=payload,
                 headers=headers,
             )
+
             resp.raise_for_status()
             data = resp.json()
 
@@ -302,28 +360,38 @@ class GithubProvider(OAuthProvider):
 
             return data
 
-    def get_readme(
-        self, repository: "Repository", access_token: Optional[str] = None
-    ) -> str:
-        owner = (
-            repository.organization.name
-            if repository.organization
-            else repository.owner.username
-        )
-        name = repository.name
+    def _refresh_if_needed(self, account):
+        if (
+            account.access_token_expires_at
+            and account.access_token_expires_at <= timezone.now()
+            and account.refresh_token
+        ):
+            new_tokens = self.refresh_access_token(account.refresh_token)
 
-        for exception in ["D-FENSE", "dengue-oracle"]:
-            if name.startswith(exception + "-"):
-                name = name[:-2]
+            account.access_token = new_tokens["access_token"]
+            account.refresh_token = new_tokens.get(
+                "refresh_token", account.refresh_token
+            )
 
-        headers = {"Accept": "application/vnd.github.raw"}
+            expires_in = new_tokens.get("expires_in")
 
-        if access_token:
-            headers["Authorization"] = f"Bearer {access_token}"
+            if expires_in:
+                account.access_token_expires_at = timezone.now() + timedelta(
+                    seconds=expires_in
+                )
+
+            account.save()
+
+    def _fetch_readme(self, owner: str, repo: str, access_token: str):
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Accept": "application/vnd.github.raw",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
 
         with httpx.Client() as client:
             resp = client.get(
-                f"https://api.github.com/repos/{owner}/{name}/readme",
+                f"https://api.github.com/repos/{owner}/{repo}/readme",
                 headers=headers,
                 follow_redirects=True,
             )
@@ -333,6 +401,43 @@ class GithubProvider(OAuthProvider):
 
             resp.raise_for_status()
             return resp.text
+
+    def get_readme(self, repository, account):
+        self._refresh_if_needed(account)
+
+        owner = getattr(repository, "owner", None)
+        name = getattr(repository, "name", None)
+
+        if not owner or not name:
+            raise ValueError("Repository must contain owner and name")
+
+        try:
+            return self._fetch_readme(owner, name, account.access_token)
+
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code != 401:
+                raise
+
+            if not account.refresh_token:
+                raise
+
+            new_tokens = self.refresh_access_token(account.refresh_token)
+
+            account.access_token = new_tokens["access_token"]
+            account.refresh_token = new_tokens.get(
+                "refresh_token", account.refresh_token
+            )
+
+            expires_in = new_tokens.get("expires_in")
+
+            if expires_in:
+                account.access_token_expires_at = timezone.now() + timedelta(
+                    seconds=expires_in
+                )
+
+            account.save()
+
+            return self._fetch_readme(owner, name, account.access_token)
 
 
 class GitlabProvider(OAuthProvider):

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useChart } from "../../hooks/useChart";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "next-themes";
+import { FRONTEND_SECRET } from "@/lib/env";
 
 interface ChartProps {
   geocode: string;
@@ -25,9 +26,18 @@ export function AccumulatedWaterfallChart({ geocode, start, end }: ChartProps) {
 
     async function load() {
       try {
+        const headers = {
+          "Content-Type": "application/json",
+          "x-internal-secret": FRONTEND_SECRET || "",
+        };
+
         const [chartRes, cityRes] = await Promise.all([
-          fetch(`/api/datastore/charts/climate/accumulated-waterfall/?${query}`),
-          fetch(`/api/datastore/cities?geocode=${geocode}`)
+          fetch(`/api/datastore/charts/climate/accumulated-waterfall/?${query}`, {
+            headers
+          }),
+          fetch(`/api/datastore/cities?geocode=${geocode}`, {
+            headers
+          })
         ]);
 
         if (!chartRes.ok) throw new Error(t('charts_climate.loading_error'));
@@ -57,6 +67,8 @@ export function AccumulatedWaterfallChart({ geocode, start, end }: ChartProps) {
             left: "center",
             textStyle: {
               color: resolvedTheme === "dark" ? "#ffffff" : "#000000",
+              fontSize: 14,
+              fontWeight: "bold"
             }
           },
           tooltip: {
@@ -85,15 +97,15 @@ export function AccumulatedWaterfallChart({ geocode, start, end }: ChartProps) {
           },
           grid: {
             left: '3%',
-            right: '3%',
-            bottom: 40,
-            top: 60,
+            right: '4%',
+            bottom: 60,
+            top: 80,
             containLabel: true
           },
           xAxis: {
             name: t('charts_climate.date'),
             nameLocation: "middle",
-            nameGap: 30,
+            nameGap: 35,
             nameTextStyle: {
               fontSize: 12,
               fontWeight: "bold",
@@ -102,8 +114,7 @@ export function AccumulatedWaterfallChart({ geocode, start, end }: ChartProps) {
             type: "category",
             data: dates,
             axisLabel: {
-              fontSize: 11,
-              formatter: (value: string) => value,
+              fontSize: 10,
               color: resolvedTheme === "dark" ? "#9ca3af" : "#6b7280"
             },
             axisLine: {
@@ -177,7 +188,11 @@ export function AccumulatedWaterfallChart({ geocode, start, end }: ChartProps) {
   }, [geocode, start, end, t, resolvedTheme]);
 
   const chartRef = useChart(option, loading);
-  return <div ref={chartRef} style={{ width: "100%", height: "400px" }} />;
+  return (
+    <div className="w-full overflow-hidden">
+      <div ref={chartRef} style={{ width: "100%", height: "400px", minWidth: "0" }} />
+    </div>
+  );
 }
 
 export function TemperatureChart({ geocode, start, end }: ChartProps) {
@@ -227,6 +242,7 @@ export function TemperatureChart({ geocode, start, end }: ChartProps) {
             left: "center",
             textStyle: {
               color: resolvedTheme === "dark" ? "#ffffff" : "#000000",
+              fontSize: 14
             }
           },
           tooltip: {
@@ -244,12 +260,13 @@ export function TemperatureChart({ geocode, start, end }: ChartProps) {
               color: resolvedTheme === "dark" ? "#ffffff" : "#000000",
             }
           },
-          grid: { left: 50, right: 30, bottom: 50, top: 80 },
+          grid: { left: '3%', right: '4%', bottom: 60, top: 100, containLabel: true },
           xAxis: {
             type: "category",
             data: dates,
             axisLabel: {
-              color: resolvedTheme === "dark" ? "#9ca3af" : "#6b7280"
+              color: resolvedTheme === "dark" ? "#9ca3af" : "#6b7280",
+              fontSize: 10
             },
             axisLine: {
               lineStyle: {
@@ -322,7 +339,11 @@ export function TemperatureChart({ geocode, start, end }: ChartProps) {
   }, [geocode, start, end, t, resolvedTheme]);
 
   const chartRef = useChart(option, loading);
-  return <div ref={chartRef} style={{ width: "100%", height: "500px" }} />;
+  return (
+    <div className="w-full overflow-hidden">
+      <div ref={chartRef} style={{ width: "100%", height: "500px", minWidth: "0" }} />
+    </div>
+  );
 }
 
 export function AirChart({ geocode, start, end }: ChartProps) {
@@ -371,6 +392,7 @@ export function AirChart({ geocode, start, end }: ChartProps) {
             left: "center",
             textStyle: {
               color: resolvedTheme === "dark" ? "#ffffff" : "#000000",
+              fontSize: 14
             }
           },
           tooltip: {
@@ -388,12 +410,13 @@ export function AirChart({ geocode, start, end }: ChartProps) {
               color: resolvedTheme === "dark" ? "#ffffff" : "#000000",
             }
           },
-          grid: { left: 50, right: 50, bottom: 50, top: 80 },
+          grid: { left: '3%', right: '3%', bottom: 60, top: 100, containLabel: true },
           xAxis: {
             type: "category",
             data: dates,
             axisLabel: {
-              color: resolvedTheme === "dark" ? "#9ca3af" : "#6b7280"
+              color: resolvedTheme === "dark" ? "#9ca3af" : "#6b7280",
+              fontSize: 10
             },
             axisLine: {
               lineStyle: {
@@ -476,5 +499,9 @@ export function AirChart({ geocode, start, end }: ChartProps) {
   }, [geocode, start, end, t, resolvedTheme]);
 
   const chartRef = useChart(option, loading);
-  return <div ref={chartRef} style={{ width: "100%", height: "500px" }} />;
+  return (
+    <div className="w-full overflow-hidden">
+      <div ref={chartRef} style={{ width: "100%", height: "500px", minWidth: "0" }} />
+    </div>
+  );
 }

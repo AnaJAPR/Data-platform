@@ -1,6 +1,129 @@
 Release Notes
 ---
 
+## [2.3.1](https://github.com/Mosqlimate-project/Data-platform/compare/2.3.0...2.3.1) (2026-03-27)
+
+
+### Bug Fixes
+
+* **models:** fix related_name for permissions check ([#478](https://github.com/Mosqlimate-project/Data-platform/issues/478)) ([b556180](https://github.com/Mosqlimate-project/Data-platform/commit/b55618076b12c3942c2f3d3baf48fb4da5f5453c))
+
+# [2.3.0](https://github.com/Mosqlimate-project/Data-platform/compare/2.2.12...2.3.0) (2026-03-27)
+
+
+### Features
+
+* **predictions:** move adm_level and disease fields from Model to Prediction ([#477](https://github.com/Mosqlimate-project/Data-platform/issues/477)) ([f5adb6c](https://github.com/Mosqlimate-project/Data-platform/commit/f5adb6cc916291b09f9d536cb54ebb088f137db1))
+
+## [2.2.12](https://github.com/Mosqlimate-project/Data-platform/compare/2.2.11...2.2.12) (2026-03-26)
+
+
+### Bug Fixes
+
+* **predictions:** minor fix on prediction validation ([#474](https://github.com/Mosqlimate-project/Data-platform/issues/474)) ([45e364e](https://github.com/Mosqlimate-project/Data-platform/commit/45e364eb601fd6d98679f8f70fd33f047cd95287))
+
+## [2.2.11](https://github.com/Mosqlimate-project/Data-platform/compare/2.2.10...2.2.11) (2026-03-20)
+
+
+### Bug Fixes
+
+* **chatbot:** update version & frontend improvements when changing the language ([#471](https://github.com/Mosqlimate-project/Data-platform/issues/471)) ([174523a](https://github.com/Mosqlimate-project/Data-platform/commit/174523affec28236ed39db03a951d6dd18871eba))
+* **registry/predictions:** include validations for inserting predictions ([#469](https://github.com/Mosqlimate-project/Data-platform/issues/469)) ([a8e2aa2](https://github.com/Mosqlimate-project/Data-platform/commit/a8e2aa2e5710abbe3cb25545b61ec3b660d32205))
+* **terms:** update TOS & privacy policy ([#470](https://github.com/Mosqlimate-project/Data-platform/issues/470)) ([7ca7960](https://github.com/Mosqlimate-project/Data-platform/commit/7ca796070ed975912da5285f7616cf5e83a122ba))
+
+## [2.2.10](https://github.com/Mosqlimate-project/Data-platform/compare/2.2.9...2.2.10) (2026-03-12)
+
+
+### Bug Fixes
+
+* **dashboard:** include the possibility of choose which interval bounds to show ([#466](https://github.com/Mosqlimate-project/Data-platform/issues/466)) ([fe5df65](https://github.com/Mosqlimate-project/Data-platform/commit/fe5df65dfd69d379f71dc8f9439179f096d759b1))
+
+## [2.2.9](https://github.com/Mosqlimate-project/Data-platform/compare/2.2.8...2.2.9) (2026-03-12)
+
+
+### Bug Fixes
+
+* fix readme fetch & more ([#465](https://github.com/Mosqlimate-project/Data-platform/issues/465)) ([a06de13](https://github.com/Mosqlimate-project/Data-platform/commit/a06de139c20ff2e1425afded73433d1e7ddce28c))
+
+## [2.2.8](https://github.com/Mosqlimate-project/Data-platform/compare/2.2.7...2.2.8) (2026-03-10)
+
+
+### Bug Fixes
+
+* fix json to csv on datastore ([#456](https://github.com/Mosqlimate-project/Data-platform/issues/456)) ([a53e2ff](https://github.com/Mosqlimate-project/Data-platform/commit/a53e2ff434c33e0de645826a3c3cc45d5664b5ac))
+* **models:** include more tags on models thumbs & more ([#464](https://github.com/Mosqlimate-project/Data-platform/issues/464)) ([73aa5bb](https://github.com/Mosqlimate-project/Data-platform/commit/73aa5bb9270d4ccfb3b90d9a85bd95c8c29116f3))
+
+## [2.2.7](https://github.com/Mosqlimate-project/Data-platform/compare/2.2.6...2.2.7) (2026-03-09)
+
+
+### Bug Fixes
+
+* **datastore:** replace url by csv/json download buttons on request builder ([#454](https://github.com/Mosqlimate-project/Data-platform/issues/454)) ([a941d92](https://github.com/Mosqlimate-project/Data-platform/commit/a941d92178ef1d3a847ad5f4492ca16d0eddc822))
+* **prod:** fix cors origins for backend on frontend requests ([#455](https://github.com/Mosqlimate-project/Data-platform/issues/455)) ([3affd24](https://github.com/Mosqlimate-project/Data-platform/commit/3affd248a24d48195fc8243e1bf517e79caf0dfb))
+
+## [2.2.6](https://github.com/Mosqlimate-project/Data-platform/compare/2.2.5...2.2.6) (2026-03-09)
+
+
+### Bug Fixes
+
+* **predictions:** include the option to select the bound pairs; prediction table; download as csv & more ([#453](https://github.com/Mosqlimate-project/Data-platform/issues/453)) ([cd3ad84](https://github.com/Mosqlimate-project/Data-platform/commit/cd3ad8448b158c07680f85ff8868c1420cc76d47))
+
+## [2.2.5](https://github.com/Mosqlimate-project/Data-platform/compare/2.2.4...2.2.5) (2026-03-06)
+
+
+### Bug Fixes
+
+* **login:** minor fixes on login to more robustness ([#452](https://github.com/Mosqlimate-project/Data-platform/issues/452)) ([2277c9e](https://github.com/Mosqlimate-project/Data-platform/commit/2277c9ef41a7af399cc5b44b66c2ffe108ea14ca))
+
+## [2.2.4](https://github.com/Mosqlimate-project/Data-platform/compare/2.2.3...2.2.4) (2026-03-06)
+
+
+### Bug Fixes
+
+* **about:** minor /about/ fixes & /datastore/ descriptions ([#451](https://github.com/Mosqlimate-project/Data-platform/issues/451)) ([96f3241](https://github.com/Mosqlimate-project/Data-platform/commit/96f3241457fb3cab9878286308c140c09bef0712))
+
+## [2.2.3](https://github.com/Mosqlimate-project/Data-platform/compare/2.2.2...2.2.3) (2026-03-05)
+
+
+### Bug Fixes
+
+* **oauth:** refresh access token when OauthAccount.access_token expires at repo /readme/ endpoint ([#450](https://github.com/Mosqlimate-project/Data-platform/issues/450)) ([b516eca](https://github.com/Mosqlimate-project/Data-platform/commit/b516eca81cd17e5e64518f32c563a7db7a126bc4))
+
+## [2.2.2](https://github.com/Mosqlimate-project/Data-platform/compare/2.2.1...2.2.2) (2026-03-05)
+
+
+### Bug Fixes
+
+* **dashboard:** include published filter on dashboard endpoint (causes empty dashboard) ([#449](https://github.com/Mosqlimate-project/Data-platform/issues/449)) ([7ceb2cd](https://github.com/Mosqlimate-project/Data-platform/commit/7ceb2cd0b4e3eb07719a927835cacb6d67b7dc23))
+
+## [2.2.1](https://github.com/Mosqlimate-project/Data-platform/compare/2.2.0...2.2.1) (2026-03-05)
+
+
+### Bug Fixes
+
+* **requests:** include x-internal-secret in the middleware ([#448](https://github.com/Mosqlimate-project/Data-platform/issues/448)) ([625a2ca](https://github.com/Mosqlimate-project/Data-platform/commit/625a2ca52c516177e9b4b62e64430712f5be5435))
+
+# [2.2.0](https://github.com/Mosqlimate-project/Data-platform/compare/2.1.10...2.2.0) (2026-03-05)
+
+
+### Features
+
+* include a protection layer to GET requests by frontend & multiple frontend minor fixes ([#447](https://github.com/Mosqlimate-project/Data-platform/issues/447)) ([eb38572](https://github.com/Mosqlimate-project/Data-platform/commit/eb38572e1097abc66c27565446f7f0876a47b8fa))
+
+## [2.1.10](https://github.com/Mosqlimate-project/Data-platform/compare/2.1.9...2.1.10) (2026-02-24)
+
+
+### Bug Fixes
+
+* **predictions:** include a PATCH to update prediction's published status on client ([#419](https://github.com/Mosqlimate-project/Data-platform/issues/419)) ([07eecf5](https://github.com/Mosqlimate-project/Data-platform/commit/07eecf5adb984ad5ea265b60f954ba2ae9b5ade0))
+
+## [2.1.9](https://github.com/Mosqlimate-project/Data-platform/compare/2.1.8...2.1.9) (2026-02-24)
+
+
+### Bug Fixes
+
+* **predictions:** include a prediction delete button on frontend ([#418](https://github.com/Mosqlimate-project/Data-platform/issues/418)) ([60c61c6](https://github.com/Mosqlimate-project/Data-platform/commit/60c61c663015d986dc1fa73f89e9daf1fea5fa92))
+
 ## [2.1.8](https://github.com/Mosqlimate-project/Data-platform/compare/2.1.7...2.1.8) (2026-02-24)
 
 

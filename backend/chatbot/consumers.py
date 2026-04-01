@@ -17,12 +17,18 @@ logger = logging.getLogger(__name__)
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        accept_language = "en"
+        query_params = self.scope.get("query_string", b"").decode()
+        current_lang = "en"
+        if query_params:
+            try:
+                params = dict(
+                    x.split("=") for x in query_params.split("&") if "=" in x
+                )
+                current_lang = params.get("lang", "en")
+            except Exception:
+                pass
 
-        for header, value in self.scope["headers"]:
-            if header == b"accept-language":
-                accept_language = value.decode()
-
+        self.language = current_lang
         self.session_key = self.scope["url_route"]["kwargs"]["session_key"]
 
         if not self.session_key:
@@ -35,19 +41,31 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
 
         api_key = cache.get(self.session_key, None)
+        user = None
 
         if api_key:
-            username = str(api_key.split(":")[0])
-            user = await sync_to_async(User.objects.get)(username=username)
-        else:
-            user = None
+            try:
+                username = str(api_key.split(":")[0])
+                user = await sync_to_async(User.objects.get)(username=username)
+            except User.DoesNotExist:
+                user = None
 
         self.user = user
         self.user_api_key = api_key
 
-        self.session, _ = await sync_to_async(
+        self.session, created = await sync_to_async(
             ChatSession.objects.get_or_create
-        )(user=user, session_key=self.session_key)
+        )(
+            session_key=self.session_key,
+            defaults={"user": user, "language": self.language},
+        )
+
+        if not created and self.session.language != self.language:
+            await sync_to_async(
+                Message.objects.filter(session=self.session).delete
+            )()
+            self.session.language = self.language
+            await sync_to_async(self.session.save)(update_fields=["language"])
 
         if user:
             messages = await sync_to_async(list)(
@@ -63,15 +81,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
             )
 
         if not messages:
-            await self.send(
-                text_data=json.dumps(
-                    {"text": {"msg": "waiting", "source": "system"}}
-                )
-            )
-
-            await sync_to_async(generate_bot_answer.delay)(
-                f"Present yourself in language: {accept_language}",
+            generate_bot_answer.delay(
+                f"Present yourself in language: {self.language}",
                 self.session_key,
+                language=self.language,
             )
 
         for message in messages:
@@ -88,13 +101,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     async def receive(self, text_data):
         response = json.loads(text_data)
+
+        if response.get("type") == "ping":
+            return
+
         question = response["text"]
 
-        await self.send(
-            text_data=json.dumps(
-                {"text": {"msg": "waiting", "source": "system"}}
-            )
-        )
+        if not question:
+            return
 
         await self.save_message("user", question)
 
@@ -117,14 +131,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 for m in messages
             ]
 
-            await sync_to_async(generate_bot_answer.delay)(
-                question, self.session_key, self.user_api_key, message_history
+            generate_bot_answer.delay(
+                question,
+                self.session_key,
+                self.user_api_key,
+                message_history,
+                language=self.language,
             )
 
         except Exception as e:
             logger.exception(f"ChatConsumer error: {e}")
             if settings.DEBUG:
-                error = e
+                error = str(e)
             else:
                 error = (
                     "Sorry, an error has occurred, please reload the page or "

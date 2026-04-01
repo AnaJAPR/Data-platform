@@ -1,4 +1,129 @@
 {
+  "privacy": {
+    "title": "Política de Privacidad – Mosqlimate",
+    "effectiveDate": "Última actualización: 18 de marzo de 2026",
+    "summary": "Mosqlimate se compromete con la protección de datos personales de acuerdo con la LGPD (Ley nº 13.709/2018) y, cuando corresponda, con el GDPR.",
+    "sections": {
+      "scope": {
+        "title": "1. Alcance",
+        "content": "Esta política es aplicable a usuarios globales, con especial enfoque en desarrolladores e investigadores que utilizan el sitio y la API de Mosqlimate."
+      },
+      "dataCollected": {
+        "title": "2. Datos Recopilados",
+        "content": "Recopilamos la siguiente información:\n• Correo electrónico e identificación básica de perfil.\n• Credenciales, tokens de acceso y llaves de API.\n• Registros técnicos (dirección IP, encabezados de solicitud y marcas de tiempo).\n• Métricas de volumen y patrones de uso de la API."
+      },
+      "purpose": {
+        "title": "3. Finalidad",
+        "content": "Los datos se tratan para los siguientes fines:\n• Autenticación y operación técnica de la plataforma.\n• Seguridad del sistema y prevención de abusos o intrusiones.\n• Comunicación técnica sobre la cuenta o servicios de la API.\n• Mejora continua del rendimiento y la estabilidad."
+      },
+      "legalBasis": {
+        "title": "4. Base Legal",
+        "content": "El tratamiento se basa en la ejecución del contrato (Términos de Uso), en el interés legítimo para garantizar la seguridad de la infraestructura y, cuando corresponda, en el consentimiento del usuario."
+      },
+      "cookies": {
+        "title": "5. Cookies",
+        "content": "Utilizamos cookies estrictamente necesarias para mantener sesiones autenticadas y recordar preferencias técnicas durante la navegación."
+      },
+      "sharing": {
+        "title": "6. Compartición de Datos",
+        "content": "No vendemos datos personales. La información solo puede compartirse con proveedores de infraestructura esenciales (ej. servicios de alojamiento) necesarios para el funcionamiento de la plataforma."
+      },
+      "security": {
+        "title": "7. Seguridad",
+        "content": "Nuestras medidas de seguridad incluyen cifrado de datos, controles estrictos de acceso digital y físico, y monitoreo continuo contra actividades sospechosas."
+      },
+      "retention": {
+        "title": "8. Retención",
+        "content": "Los registros técnicos y las métricas de uso pueden conservarse hasta por período indefinido para fines de seguridad, auditoría y análisis de integridad de la API."
+      },
+      "rights": {
+        "title": "9. Derechos del Titular",
+        "content": "De acuerdo con las leyes de protección de datos, tiene derecho a acceder, corregir, anonimizar o eliminar sus datos, así como a solicitar la portabilidad o revocar consentimientos."
+      },
+      "contact": {
+        "title": "10. Contacto",
+        "content": "Para ejercer sus derechos o aclarar dudas sobre privacidad, contáctenos en: mosqlimate@gmail.com"
+      },
+      "changes": {
+        "title": "11. Cambios",
+        "content": "Esta política puede actualizarse periódicamente. El uso continuo de la plataforma tras las actualizaciones constituye el conocimiento y la aceptación de la versión vigente."
+      }
+    },
+    "footer": "Para consultas relacionadas con la privacidad y protección de datos, contacte con nuestro soporte."
+  },
+  "tos": {
+    "title": "Términos de Uso – Mosqlimate",
+    "effectiveDate": "Última actualización: 18 de marzo de 2026",
+    "summary": "El uso de mosqlimate.org y api.mosqlimate.org implica la aceptación total de estos términos. Mosqlimate proporciona acceso automatizado a datos y modelos de pronóstico para enfermedades arbovirales.",
+    "sections": {
+      "acceptance": {
+        "title": "Aceptación de los Términos",
+        "content": "Al acceder o utilizar esta plataforma, aceptas cumplir con estos Términos y todas las leyes aplicables. El uso continuado constituye la aceptación total."
+      },
+      "accounts": {
+        "title": "Cuentas y Elegibilidad",
+        "content": "Debes tener al menos 13 años para crear una cuenta. Eres responsable de la seguridad de tus credenciales. Las cuentas pueden ser suspendidas por violar estos términos."
+      },
+      "oauth": {
+        "title": "OAuth e Identidad",
+        "content": "Permitimos la autenticación a través de terceros. Podemos acceder al correo y nombre de usuario para evitar duplicados y vincular cuentas automáticamente si el correo coincide."
+      },
+      "apiRules": {
+        "title": "API – Reglas Técnicas",
+        "content": "• Rate Limiting: 60 req/min por token. Los límites pueden cambiar sin previo aviso.\n• Autenticación: El uso de API Key es obligatorio; las llaves son personales e intransferibles.\n• Monitoreo: Todas las solicitudes pueden ser registradas. Actividades sospechosas generan bloqueo automático.\n• SLA: Servicio 'best-effort' sin garantía de disponibilidad mínima."
+      },
+      "content": {
+        "title": "Uso de Datos",
+        "content": "Permitido para investigación y desarrollo, siempre que no viole leyes. Los datos pueden provenir de fuentes públicas (sujetos a licencias originales) o ser procesados por Mosqlimate. El usuario debe respetar las atribuciones requeridas."
+      },
+      "acceptableUse": {
+        "title": "Uso Aceptable",
+        "content": "Está prohibido el uso abusivo de la API, el scraping masivo no autorizado, los intentos de intrusión y la publicación de datos personales."
+      },
+      "dataProvenance": {
+        "title": "Procedencia y Reproducibilidad",
+        "content": "Buscamos mantener metadatos de origen y procesamiento, pero no garantizamos la procedencia completa o reproducibilidad total debido a cambios en fuentes externas."
+      },
+      "intellectualProperty": {
+        "title": "Propiedad Intelectual",
+        "content": "Todo el contenido e infraestructura pertenecen a Mosqlimate y están bajo licencia GPL-3. La agregación y estructuración de datos por Mosqlimate puede constituir propiedad intelectual propia."
+      },
+      "citation": {
+        "title": "Cita Académica",
+        "content": "Para uso en investigación, utilice: GANEM, F.; VACARO, L. B.; ARAUJO, E. C.; ALVES, L. D.; BASTOS, L.; CARVALHO, L. M.; et al.; COELHO, F. C. Mosqlimate: a platform to providing automatable access to data and forecasting models for arbovirus disease. arXiv, 2024. DOI: 10.48550/arXiv.2405.04415"
+      },
+      "warranty": {
+        "title": "Exención de Garantías",
+        "content": "Datos proporcionados 'tal cual' (as is). No garantizamos integridad o precisión. No utilizar como única fuente para decisiones críticas (financieras, regulatorias u operativas)."
+      },
+      "liability": {
+        "title": "Limitación de Responsabilidad",
+        "content": "No nos hacemos responsables por la pérdida de datos, interrupciones o decisiones de terceros basadas en los datos proporcionados."
+      },
+      "contact": {
+        "title": "Contacto",
+        "content": "¿Dudas sobre estos Términos? Contáctenos en: mosqlimate@gmail.com"
+      },
+      "changes": {
+        "title": "Cambios en los Términos",
+        "content": "Nos reservamos el derecho de actualizar estos términos. El uso continuado tras los cambios constituye la aceptación de la nueva versión."
+      }
+    },
+    "footer": "Proyecto Mosqlimate © 2026 - Código abierto bajo licencia GPL-3."
+  },
+  "model_sidebar": {
+    "description": "Descripción",
+    "description_placeholder": "Escriba una breve descripción para este modelo...",
+    "no_description": "No se proporcionó ninguna descripción.",
+    "metadata": "Metadatos",
+    "contributors": "Colaboradores",
+    "tags": {
+      "disease": "Enfermedad",
+      "category": "Categoría",
+      "admin_level": "Nivel Adm",
+      "resolution": "Resolución"
+    }
+  },
   "dashboard": {
     "score_columns": {
       "mae": "MAE",
@@ -15,7 +140,7 @@
       "case_definition": "Definición de Caso",
       "reported": "Notificados",
       "probable": "Probables",
-      "imdc_sprint": "Año del Sprint IMDC"
+      "imdc_sprint": "Año del IMDC"
     },
     "chart": {
       "probable_cases": "Casos probables",
@@ -254,12 +379,24 @@
     }
   },
   "common": {
-    "cancel": "Cancelar"
+    "documentation": "Documentación",
+    "source": "Fuente",
+    "cancel": "Cancelar",
+    "actions": {
+      "delete": "Eliminar",
+      "confirm": "Confirmar",
+      "cancel": "Cancelar"
+    }
+  },
+  "models": {
+    "predictions": {
+      "delete_confirm": "¿Estás seguro de que deseas eliminar la predicción #{{id}}?"
+    }
   },
   "datastore": {
     "infodengue": {
       "title": "Enfermedades transmitidas por mosquitos",
-      "description": "Este endpoint proporciona acceso a datos del proyecto Infodengue, que ofrece diversas variables epidemiológicas para todos los municipios brasileños en una escala semanal. Los parámetros de la solicitud y las variables de datos se describen a continuación.",
+      "description": "Este endpoint proporciona, a través de Mosqlimate, acceso al conjunto de datos epidemiológicos del proyecto InfoDengue con una resolución semanal, que abarca todos los municipios brasileños. Los indicadores y variables disponibles se derivan de datos oficiales de vigilancia de la salud pública en Brasil y son procesados ​​y estandarizados por InfoDengue para facilitar el monitoreo y modelado de arbovirus. Para obtener detalles de uso, parámetros de solicitud y ejemplos, consulte la documentación de la API",
       "variables": {
         "data_iniSE": "Fecha de inicio de la semana epidemiológica",
         "SE": "Semana epidemiológica",
@@ -294,7 +431,7 @@
     },
     "climate": {
       "title": "Datos climáticos",
-      "description": "A través de este endpoint, puede obtener diversas variables climáticas extraídas para todos los municipios brasileños a partir de datos de reanálisis satelital proporcionados por Copernicus ERA5.",
+      "description": "Este endpoint proporciona, a través de Mosqlimate, acceso a variables climáticas a nivel municipal para todo Brasil, derivadas del reanálisis de ERA5 (Servicio de Cambio Climático de Copernicus). Mosqlimate extrae, agrega y refina los datos para cada municipio brasileño (estandarización espaciotemporal y formato), lo que facilita su uso en flujos de trabajo analíticos. Para obtener detalles de uso, parámetros de solicitud y ejemplos, consulte la documentación de la API",
       "variables": {
         "date": "Día del año",
         "geocodigo": "Código del municipio (IBGE)",
@@ -314,8 +451,8 @@
       }
     },
     "mosquito": {
-      "title": "Conteo de Huevos de Mosquito",
-      "description": "Aquí obtiene acceso a datos de abundancia de mosquitos del proyecto Contaovos, codesarrollado por el proyecto Mosqlimate. Estos datos, descritos a continuación, se basan en ovitrampas distribuidas por todo Brasil según un diseño de monitoreo especificado por el Ministerio de Salud.",
+      "title": "Conteo de Huevos de Mosquito (ContaOvos)",
+      "description": "Este endpoint proporciona, a través de Mosqlimate, acceso a los datos de abundancia de mosquitos del proyecto ContaOvos, codesarrollado con Mosqlimate. El conjunto de datos se basa en el monitoreo de ovitrampas (trampas para huevos) en los municipios participantes, siguiendo un diseño de vigilancia especificado por el Ministerio de Salud de Brasil. Los registros incluyen la ubicación de las ovitrampas (latitud/longitud) y el conteo de huevos a lo largo del tiempo, lo que respalda los análisis de la dinámica de vectores y el riesgo de arbovirus. Para obtener detalles de uso, parámetros de solicitud y ejemplos, consulte la documentación de la API",
       "variables": {
         "counting_id": "",
         "date": "",
@@ -336,7 +473,7 @@
     },
     "episcanner": {
       "title": "Datos EpiScanner",
-      "description": "Datos del Escaneador Epidémico en tiempo real que proporciona estimaciones de parámetros epidemiológicos para ciudades en Brasil.",
+      "description": "Este endpoint proporciona, a través de Mosqlimate, acceso a los datos de EpiScanner (Epidemic Scanner), una herramienta desarrollada en colaboración con InfoDengue que proporciona estimaciones en tiempo real de los parámetros epidemiológicos de las ciudades de Brasil. Para obtener información sobre su uso, parámetros de solicitud y ejemplos, consulte la documentación de la API",
       "variables": {
         "disease": "Enfermedad específica (dengue, zika, chik)",
         "CID10": "Código CIE-10 de la enfermedad",
@@ -391,13 +528,13 @@
       "araujo_cnmac_2023": "ARAUJO, E. C.; COELHO, FLÁVIO CODEÇO . Evaluating transfer learning for forecasting chikungunya cases. In: XLII CNMAC, 2023, Bonito - MS. Proceeding Series of the Brazilian Society of Computational and Applied Mathematics, 2023. v. 10.",
       "araujo_evigilancia_2023": "ARAUJO, E. C.; COELHO, FLÁVIO CODEÇO . Forecasting dengue burden using machine learning. In: E-Vigilância 2023, 2023, Rio de Janeiro. Livro de Resumos, 2023.",
       "almeida_epi_2024": "ALMEIDA, I. F.; LANA, R. M. ; COELHO, F. C. ; CODECO, C. T. . PERFIS DE TRANSMISSÃO DE DENGUE: ANÁLISE DOS MUNICÍPIOS BRASILEIROS (2010-2022). In: 12° Congresso Brasileiro de Epidemiologia, 2024, Rio de Janeiro. Anais do 12º Congresso Brasileiro de Epidemiologia - Vol.3, 2024.",
-      "araujo_epi_2024": "ARAUJO, E. C.; CARVALHO, L. M. ; VACARO, L. B. ; BASTOS, M. M. ; BASTOS, L. S. ; LANA, R. M. ; CODECO, C. T. ; ALMEIDA, I. F. ; FREITAS, L. P. ; SEGUNDO, Z. R. C. ; COELHO, F. C. . MOSQLIMATE: A PLATFORM FOR COMPARING ARBOVIRAL DISEASES FORECASTING MODELS. In: 12° Congresso Brasileiro de Epidemiologia, 2024, Rio de Janeiro. Anais do 12º Congresso Brasileiro de Epidemiologia - Vol.3, 2024.",
+      "araujo_epi_2024": "ARAUJO, E. C.; CARVALHO, L. M. ; VACARO, L. B. ; BASTOS, M. M. ; BASTOS, L. S. ; LANA, R. M. ; CODECO, C. T. ; ALMEIDA, I. F. ; PICININI FREITAS, L. ; SEGUNDO, Z. R. C. ; COELHO, F. C. . MOSQLIMATE: A PLATFORM FOR COMPARING ARBOVIRAL DISEASES FORECASTING MODELS. In: 12° Congresso Brasileiro de Epidemiologia, 2024, Rio de Janeiro. Anais do 12º Congresso Brasileiro de Epidemiologia - Vol.3, 2024.",
       "segundo_epi_2024": "SEGUNDO, Zuilho Rodrigues Castro , 2025, MODELOS DE DECISÃO PARA TESTAGEM DE CASOS SUSPEITOS DE ARBOVIROSES POR RL. In: 12° Congresso Brasileiro de Epidemiologia, 2024, Rio de Janeiro. Anais do 12º Congresso Brasileiro de Epidemiologia - Vol.3, 2024.",
       "magalhaes_eid_2024": "Magalhaes, T., Coelho, F. C., Souza, W. V., Viana, I. F., Jaenisch, T., Marques, E. T., ... & Braga, C. (2024). Effect of Sexual Partnerships on Zika Virus Transmission in Virus-Endemic Region, Northeast Brazil. Emerging Infectious Diseases, 30(12), 2559.",
       "araujo_rsos_2025": "Araujo, E. C., Codeço, C. T., Loch, S., Vacaro, L. B., Freitas, L. P., Lana, R. M., ... & Coelho, F. C. (2025). Large-scale epidemiological modelling: scanning for mosquito-borne diseases spatio-temporal patterns in Brazil. Royal Society Open Science, 12(5), 241261.",
       "ganem_arxiv_2024": "Ganem, F., Vacaro, L. B., Araujo, E. C., Alves, L. D., Bastos, L., Carvalho, L. M., ... & Coelho, F. C. (2024). Mosqlimate: a platform to providing automatable access to data and forecasting models for arbovirus disease. arXiv preprint arXiv:2410.18945.",
       "bastos_arxiv_2024": "Bastos, M. M., Carvalho, L. M., Araujo, E. C., & Coelho, F. C. (2024). Long-term predictive models for mosquito borne diseases: a narrative review. arXiv preprint arXiv:2411.13680.",
-      "araujo_pnas_2026": "ARAUJO, E. C.; CARVALHO, L. M.; GANEM, F.; VACARO, L. B.; BASTOS, L. S.; FREITAS, L. P.; et al.; COELHO, F. C. Leveraging probabilistic forecasts for dengue preparedness and control: The 2024 Dengue Forecasting Sprint in Brazil. Proceedings of the National Academy of Sciences of the United States of America, v. 123, n. 7, p. e2508989123, 2026.",
+      "araujo_pnas_2026": "ARAUJO, E. C.; CARVALHO, L. M.; GANEM, F.; VACARO, L. B.; BASTOS, L. S.; PICININI FREITAS, L.; et al.; COELHO, F. C. Leveraging probabilistic forecasts for dengue preparedness and control: The 2024 Dengue Forecasting Sprint in Brazil. Proceedings of the National Academy of Sciences of the United States of America, v. 123, n. 7, p. e2508989123, 2026.",
       "freitas_medrxiv_2025": "Picinini Freitas, L., Ferreira, D. A. D. C., Martins Lana, R., Câmara, D. C. P., Portella, T. P., Carvalho, M. S., ... & Bastos, L. S. (2025). A statistical model for forecasting probabilistic epidemic bands for dengue cases in Brazil. medRxiv, 2025-06.",
       "santos_thesis_2024": "Santos, J. P. S. dos. (2024). Analyzing dengue epidemic dynamics using physics informed neural networks [Doctoral dissertation, Fundação Getulio Vargas]. Fundação Getulio Vargas EMAp.",
       "dataset_egg": "Aedes aegypti Egg Image Data Set",
@@ -426,12 +563,11 @@
     "team": {
       "flavio": "Investigador Principal de Mosqlimate y profesor asociado en la Escuela de Matemáticas Aplicadas de la FGV, Río de Janeiro, Brasil. También formo parte de la red GRAPH, con sede en la Universidad de Ginebra, donde soy su coordinador de análisis de datos. En Brasil, también soy uno de los coordinadores del proyecto Infodengue. Mis intereses de investigación giran en torno a la epidemiología de enfermedades infecciosas desde el punto de vista de las matemáticas, la estadística y la ciencia de datos.",
       "leonardo": "Investigador en salud pública en el Programa de Computación Científica (PROCC), Fundación Oswaldo Cruz (Fiocruz). Es becario de investigación en FAPERJ y CNPq. Su investigación principal es el desarrollo y aplicación de métodos estadísticos (bayesianos) para la epidemiología de enfermedades infecciosas. Es co-líder en el WP2.",
-      "luiz": "Profesor Asistente en la Escuela de Matemáticas Aplicadas, Fundación Getulio Vargas. Sus intereses son la Bioestadística, particularmente Monte Carlo vía cadenas de Markov, filogenética estadística y combinación de modelos. Co-lideró el WP2, esperando traer técnicas de vanguardia de comparación y combinación de modelos para predecir enfermedades arbovirales.",
+      "luiz": "Profesor Asistente en la Escuela de Matemáticas Aplicadas, Fundación Getulio Vargas. Sus intereses son la Bioestadística, particularmente Monte Carlo vía cadenas de Markov, filogenética estadística y combinación de modelos. Es co-líder en el WP2, esperando traer técnicas de vanguardia de comparación y combinación de modelos para predecir enfermedades arbovirales.",
       "leon": "Profesor en CEFET, Río de Janeiro, Brasil. Desarrollador de la aplicación Conta Ovos, que tiene como objetivo monitorear la densidad de huevos de Aedes aegypti en el espacio y el tiempo. Mis intereses son el procesamiento de imágenes y el diseño de aplicaciones. Coordinador del WP1.",
       "eduardo": "Licenciado en ingeniería de control y automatización en UTFPR. Tiene experiencia en el análisis de datos de salud pública y desarrollo de modelos de aprendizaje automático aplicados a contextos epidemiológicos. Sus intereses incluyen la ciencia de datos aplicada a la salud, modelado matemático y computacional de enfermedades, desarrollo de herramientas en Python y colaboración interdisciplinaria en proyectos de impacto social. Trabaja como científico de datos en el WP2 del proyecto Mosqlimate. También es gerente del proyecto Mosqlimate.",
       "iasmim": "Investigadora posdoctoral en FGV EMAp. Doctora y Máster en Epidemiología en Salud Pública de ENSP/FIOCRUZ. Investigadora en el proyecto Infodengue y Mosqlimate, es investigadora en el WP2, donde trabaja con modelos que involucran patrones de transmisión de arbovirus y sus determinantes epidemiológicos y climáticos. También es Gerente de Participación Comunitaria de Mosqlimate e investigadora principal en el WP3. Sus intereses de investigación se centran en enfermedades transmisibles y su epidemiología.",
       "lua": "Estudiante de Ciencias de la Computación y entusiasta del Código Abierto. Desarrollador de Software en la Fundación Getulio Vargas, responsable del desarrollo, implementación y mantenimiento del Proyecto Mosqlimate.",
-      "lucas": "Estadístico y científico de datos, con doctorado en Epidemiología en Salud Pública de ENSP/FIOCRUZ. Mi experiencia profesional incluye la aplicación de metodologías estadísticas y de aprendizaje automático en diversos campos como la agricultura y la salud, así como contribuir a iniciativas de salud pública y análisis de datos para organizaciones internacionales.",
       "fabiana": "Máster y doctora en Epidemiología y Salud Pública de la Universidade de Brasília y Universitat Autònoma de Barcelona. Es investigadora posdoctoral en FGV EMAp y miembro del Equipo Mosqlimate, investigando estrategias de vigilancia del dengue y la relación entre factores socioeconómicos, climáticos y ambientales con enfermedades arbovirales. Fabiana es coordinadora del Forecast Sprint de Mosqlimate, gestionando nuestras competiciones internacionales anuales de pronóstico.",
       "beatriz": "Investigadora posdoctoral en FGV EMAp y miembro del Equipo Mosqlimate, realizando investigaciones sobre inferencia bayesiana, modelado matemático del Dengue y Teoría de la Posibilidad. Máster y Doctora en Matemáticas Aplicadas de la Universidad de Campinas. Tiene curiosidad por modelos híbridos de enfermedades infecciosas que involucran sistemas dinámicos difusos, redes neuronales y métodos estadísticos de cuantificación de incertidumbre.",
       "marcio": "Doctorando en Física, posee una profunda afinidad por los sistemas dinámicos, mecánica estadística, inferencia bayesiana y aprendizaje automático. Actualmente contribuye con sus conocimientos como investigador colaborador en el proyecto Mosqlimate.",
@@ -439,12 +575,13 @@
       "julie": "Investigadora posdoctoral en FGV EMAp. Es matemática aplicada, física y científica de datos con doctorado en Matemáticas Aplicadas y Ciencia de Datos. Tiene maestría y licenciatura en Física. Su investigación se centra en el modelado matemático de epidemias, enfatizando el uso de redes neuronales informadas por modelos epidemiológicos (PINNs) para capturar la dinámica compleja del dengue. También tiene experiencia en aprendizaje automático, inferencia causal y desarrollo de tuberías de datos para análisis epidemiológico. Su trabajo busca integrar computación avanzada y métodos de inteligencia artificial para comprender y controlar enfermedades infecciosas.",
       "ana": "Estudiante de pregrado en Ciencia de Datos e Inteligencia Artificial en FGV-EMAp. Trabaja como desarrolladora y científica de datos en el proyecto de investigación Mosqlimate. Becaria de iniciación científica de FAPERJ en un proyecto realizado por investigadores de Fiocruz con 15 niñas de escuelas públicas de Río de Janeiro. Interés en ciencia de datos aplicada a la salud, aprendizaje automático y proyectos sociales, especialmente los relacionados con la educación.",
       "ezequiel": "Estudiante de maestría en Matemáticas Aplicadas y Ciencia de Datos en FGV EMAp. Su trabajo se centra en el modelado bayesiano, particularmente en power priors. Actualmente se desempeña como asistente de investigación en el proyecto del paquete R hdbayes y en Mosqlimate. Sus principales intereses de investigación se encuentran en la bioestadística, especialmente en la estadística bayesiana y computacional.",
-      "zuilho": "Estudiante de pregrado en Ciencia de Datos e Inteligencia Artificial en FGV EMAp. Estoy particularmente interesado en Aprendizaje Automático y Aprendizaje por Refuerzo. Actualmente, estoy trabajando en modelos de aprendizaje por refuerzo donde los agentes están diseñados para optimizar la distribución de pruebas para enfermedades arbovirales como dengue y chikungunya en diferentes regiones.",
+      "zuilho": "Estudiante de maestría en Matemáticas Aplicadas y Ciencia de Datos en FGV EMAp. Sus intereses de investigación incluyen aprendizaje automático, aprendizaje por refuerzo, modelos de pronóstico, topología y modelado general. Actualmente trabaja en modelos para predecir la incidencia del dengue y optimizar la distribución de pruebas diagnósticas para enfermedades arbovirales mediante agentes de aprendizaje por refuerzo en diferentes regiones.",
       "sillas": "Estudiante de pregrado en Ciencia de Datos e Inteligencia Artificial en FGV-EMAp. Actualmente trabaja en la integración de un asistente de IA en la plataforma Mosqlimate. Sus intereses se centran en el Aprendizaje Automático, particularmente modelos de Aprendizaje Profundo.",
       "raquel": "Becaria Marie Curie en el Barcelona Supercomputing Center en el grupo de Resiliencia en Salud Global. Su formación es en epidemiología cuantitativa y su investigación se centra en la dinámica de enfermedades infecciosas y su asociación con factores ambientales, climáticos y sociales. Es colaboradora en el proyecto Mosqlimate.",
       "thais": "Bióloga con maestría y doctorado en Zoología. Tengo interés en estudios sobre ecología y dinámica poblacional de vectores de arbovirosis y su impacto en la dinámica de transmisión de enfermedades. Actualmente trabajo como analista en el Centro de Inteligencia Epidemiológica de la Secretaría de Salud de la Ciudad de Río de Janeiro y como investigadora colaboradora en el sistema Infodengue.",
       "lais": "Investigadora en el Programa de Computación Científica (PROCC/Fiocruz), con maestría y doctorado en Epidemiología de ENSP/Fiocruz. Realizó posdoctorado en PROCC y CReSP, Université de Montréal. Su trabajo se centra en el modelado bayesiano de enfermedades infecciosas, especialmente arbovirosis, analizando patrones espaciales y determinantes socioambientales.",
-      "bruno": "Investigador posdoctoral en el Barcelona Supercomputing Center en el grupo de Resiliencia en Salud Global, donde desarrolla modelos de enfermedades infecciosas para alerta temprana y apoyo a la decisión. Construye indicadores para rastrear los impactos del cambio climático en la salud utilizando kits de herramientas digitales de acceso abierto y reproducibles. Es biólogo, Doctor en Ecología y Evolución y Máster en Parasitología. Como colaborador en Mosqlimate, Bruno está desarrollando modelos de aprendizaje profundo para predecir dengue en Brasil utilizando datos del sistema Infodengue."
+      "bruno": "Investigador posdoctoral en el Barcelona Supercomputing Center en el grupo de Resiliencia en Salud Global, donde desarrolla modelos de enfermedades infecciosas para alerta temprana y apoyo a la decisión. Construye indicadores para rastrear los impactos del cambio climático en la salud utilizando kits de herramientas digitales de acceso abierto y reproducibles. Es biólogo, Doctor en Ecología y Evolución y Máster en Parasitología. Como colaborador en Mosqlimate, Bruno está desarrollando modelos de aprendizaje profundo para predecir dengue en Brasil utilizando datos del sistema Infodengue.",
+      "joyce": "Estudiante de doctorado en Matemáticas Aplicadas y Ciencia de Datos en la FGV EMAp. Tiene una maestría en Modelado Matemático de la Información y es licenciada en Matemáticas Aplicadas. Sus intereses de investigación se centran en el modelado matemático de sistemas complejos, con especial énfasis en la dinámica epidemiológica y enfoques basados en datos para comprender fenómenos del mundo real. Le interesa integrar el modelado cuantitativo, el análisis de datos y los métodos computacionales para apoyar la toma de decisiones en contextos de salud pública."
     }
   },
   "navbar": {
@@ -469,26 +606,26 @@
     },
     "project": {
       "title": "Conozca el proyecto",
-      "description": "Mosqlimate es una plataforma innovadora para el monitoreo y pronóstico de riesgos relacionados con arbovirosis (enfermedades transmitidas por mosquitos) en el contexto del cambio climático. Desarrollamos herramientas que integran datos climáticos, epidemiológicos y entomológicos para mejorar la detección temprana de brotes y apoyar estrategias de control en Brasil y América del Sur. Nuestro propósito es prevenir riesgos y fortalecer la respuesta a enfermedades como dengue, chikungunya y Zika.",
+      "description": "Mosqlimate es una plataforma innovadora para el monitoreo y pronóstico de riesgos relacionados con enfermedades transmitidas por mosquitos en el contexto del cambio climático. Desarrollamos herramientas que integran datos climáticos, epidemiológicos y entomológicos para mejorar la detección temprana de brotes y apoyar las estrategias de control en Brasil y Sudamérica. Nuestro objetivo es prevenir riesgos y fortalecer la respuesta a enfermedades como el dengue, el chikunguña y el zika.",
       "products": "Nuestros dos productos principales son:",
       "btn_data": "Datos",
       "btn_models": "Modelos Predictivos"
     },
     "data": {
       "title": "Explore nuestros datos",
-      "cases_title": "Casos",
+      "cases_title": "Casos de enfermedad",
       "cases_desc": "Datos semanales sobre <b>dengue</b>, <b>Zika</b> y <b>chikungunya</b> para todos los municipios brasileños, con el fin de seguir tendencias y estacionalidad para el control de enfermedades.",
       "climate_title": "Clima",
       "climate_desc": "Variables climáticas diarias extraídas de datos de reanálisis satelital, como <b>temperatura</b> y <b>precipitación</b>, para predecir la dinámica de proliferación de los mosquitos vectores.",
-      "mosquito_title": "Mosquito",
+      "mosquito_title": "Datos vectoriales",
       "mosquito_desc": "Datos del proyecto <b>Contaovos</b>, obtenidos mediante trampas para huevos de Aedes aegypti para monitorear la densidad vectorial en tiempo real en Brasil.",
-      "epi_title": "Epi-Scanner",
+      "epi_title": "Episcanner",
       "epi_desc": "Analiza y presenta datos actualizados de la <b>expansión de dengue, Zika y chikungunya</b> en el territorio nacional con foco en patrones espaciales y temporales de transmisión."
     },
     "models": {
-      "title": "Analice nuestros modelos",
+      "title": "Modelos de pronóstico y cuadros de mando comparativos",
       "description": "Mosqlimate pone a disposición y registra modelos de pronóstico para dengue, chikungunya y Zika, utilizando datos climáticos y epidemiológicos oficiales de dominio público. Estos modelos permiten comparar metodologías a través de paneles, mejorar pronósticos e identificar señales de expansión o brotes, incluyendo nuevos arbovirus, integrándose al sistema de alerta temprana Infodengue.",
-      "image_message": "Haga clic para ser redirigido a la pestaña Modelos."
+      "image_message": "Haga clic para ser redirigido a la pestaña Dashboard."
     },
     "differentials": {
       "title": "Descubra los diferenciales de Mosqlimate",
@@ -501,29 +638,32 @@
       "quality_title": "Compromiso con la calidad",
       "quality_desc": "Contenido actualizado, sustentado por publicaciones científicas y resultados validados.",
       "community_title": "Comunidad activa y colaborativa",
-      "community_desc": "Realiza eventos destacados como la E-Vigilancia bianual y el Sprint anual, además de seminarios continuos."
+      "community_desc": "Realiza eventos destacados como la E-Vigilancia bianual y el IMDC (Infodengue-Mosqlimate Dengue Challenge) anual, además de seminarios continuos."
     },
     "team": {
       "title": "Conozca a nuestro equipo",
-      "image_message": "Haga clic para ser redirigido a la pestaña 'Sobre Nosotros'."
+      "image_message": "Haga clic para ir a la pestaña 'Sobre Nosotros'."
     }
   },
   "model_predictions": {
     "empty_title": "Aún no hay predicciones publicadas",
-    "empty_desc": "Este modelo no tiene predicciones asociadas. Puede cargar pronósticos usando Python, R o directamente a través de la API.",
+    "empty_desc": "Este modelo no tiene ninguna predicción asociada. Puede cargar pronósticos usando Python, R o directamente a través de la API.",
     "python_rec": "1. Python (Recomendado)",
-    "need_api_key": "¿Necesita una clave API? Vaya a su [Perfil](/profile/auth) para generar una.",
-    "select_prediction": "Seleccionar una Predicción",
+    "need_api_key": "¿Necesita una Clave de API? Vaya a su [Perfil](/profile/auth) para generar una.",
+    "usage_examples": "Ejemplos de Uso",
+    "view_docs": "Documentación de la API",
+    "delete_confirm": "¿Está seguro de que desea eliminar la predicción #{{id}}? Esta acción no se puede deshacer.",
+    "select_prediction": "Seleccione una Predicción",
     "prediction_id": "Predicción #{{id}}",
     "unable_load": "No se pudieron cargar los datos del gráfico",
-    "select_below": "Seleccione una predicción de la lista a continuación",
-    "search_placeholder": "Buscar predicciones...",
+    "select_below": "Seleccione una predicción de la lista a continuación para ver el gráfico",
+    "search_placeholder": "Buscar predicciones por ID, Nivel ADM, Fecha, Commit...",
     "metric_label": "Métrica:",
-    "no_matches": "Ninguna predicción coincide con su búsqueda.",
-    "no_found": "No se encontraron predicciones.",
+    "no_matches": "Ninguna predicción coincide con sus filtros de búsqueda.",
+    "no_found": "No se encontraron predicciones para este modelo.",
     "saving": "Guardando...",
     "published": "Publicado",
-    "view_dashboard": "Ver Panel Completo"
+    "view_dashboard": "Ver Dashboard Completo"
   },
   "profile": {
     "title": "Perfil",
@@ -575,23 +715,28 @@
   },
   "profile_models": {
     "title": "Modelos",
-    "description": "Modelos que posees, contribuyes o mantienes dentro de una organización.",
+    "description": "Administre sus modelos integrados y su disponibilidad.",
     "empty_title": "No se encontraron modelos",
-    "empty_desc": "Aún no has vinculado ningún modelo. Conecta un repositorio para comenzar.",
+    "empty_desc": "Aún no ha conectado ningún modelo a su perfil.",
     "table": {
       "name": "Nombre",
-      "disease": "Enfermedad",
       "category": "Categoría",
       "status": "Estado",
-      "actions": "Acciones"
+      "delete": "Eliminar"
     },
     "status": {
       "active": "Activo",
-      "inactive": "Inactivo"
+      "inactive": "Inactivo",
+      "click_to_activate": "Haga clic para Activar",
+      "click_to_deactivate": "Haga clic para Desactivar"
     },
-    "manage": "Administrar",
-    "view_only": "Solo Vista",
-    "manage_soon": "Panel de administración próximamente"
+    "modal": {
+      "title": "Acción Crítica",
+      "description": "Esto eliminará permanentemente el modelo y sus predicctiones. Para confirmar, escriba",
+      "placeholder": "Escriba el nombre del modelo aquí",
+      "cancel": "Cancelar",
+      "confirm": "Eliminar Modelo"
+    }
   },
   "profile_account": {
     "title": "Configuración de la Cuenta",
@@ -666,6 +811,7 @@
     "connect_title": "Conectar",
     "connect_email": "Contacto por Correo",
     "connect_youtube": "Canal de YouTube",
+    "connect_linkedin": "Perfil de LinkedIn",
     "project_name": "Proyecto Mosqlimate",
     "rights": "Todos los derechos reservados.",
     "terms": "Términos de Servicio",

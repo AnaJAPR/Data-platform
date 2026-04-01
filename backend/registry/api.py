@@ -1,6 +1,9 @@
+import hashlib
+import json
 from collections import defaultdict
 from typing import List
 from urllib.parse import urlparse
+from datetime import timedelta
 
 import httpx
 from django.contrib.auth import get_user_model
@@ -8,7 +11,9 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction, models
 from django.core.files.base import ContentFile
+from django.utils import timezone
 from main.schema import (
+    SuccessSchema,
     BadRequestSchema,
     NotFoundSchema,
     ForbiddenSchema,
@@ -18,7 +23,8 @@ from main.schema import (
 from ninja import Router, Query
 from ninja.pagination import paginate
 from ninja.decorators import decorate_view
-from users.auth import UidKeyAuth, JWTAuth
+from ninja.errors import ValidationError
+from users.auth import UidKeyAuth, JWTAuth, OptionalJWTAuth
 from users.providers import GithubProvider, GitlabProvider
 
 from .utils import calling_via_swagger
@@ -103,19 +109,12 @@ def model_add(request, payload: s.ModelIncludeInit):
             defaults={"permission": m.RepositoryContributor.Permissions.ADMIN},
         )
 
-        try:
-            disease = m.Disease.objects.get(id=payload.disease_id)
-        except m.Disease.DoesNotExist:
-            return 400, {"message": "Unknown Disease."}
-
         sprint_id = payload.sprint if payload.sprint != 0 else None
 
         model, created = m.RepositoryModel.objects.update_or_create(
             repository=repository,
             defaults={
-                "disease": disease,
                 "time_resolution": payload.time_resolution,
-                "adm_level": payload.adm_level,
                 "category": payload.category,
                 "sprint_id": sprint_id,
             },
@@ -150,110 +149,158 @@ def model_add(request, payload: s.ModelIncludeInit):
 @router.get(
     "/models/thumbnails/",
     response=List[s.ModelThumbs],
-    auth=UidKeyAuth(),
+    auth=OptionalJWTAuth(),
     include_in_schema=False,
 )
 @decorate_view(never_cache)
 def models_thumbnails(request):
     user = request.auth
+    perm = models.Q(repository__active=True)
+
+    if user and user.is_authenticated:
+        if user.is_superuser:
+            perm = models.Q()
+        else:
+            perm |= (
+                models.Q(repository__owner=user)
+                | models.Q(
+                    repository__organization__memberships__user=user,
+                    repository__organization__memberships__role__in=[
+                        "OWNER",
+                        "ADMIN",
+                    ],
+                )
+                | models.Q(
+                    repository__repository_contributors__user=user,
+                    repository__repository_contributors__permission="ADMIN",
+                )
+            )
 
     qs = (
-        m.RepositoryModel.objects.select_related(
+        m.RepositoryModel.objects.filter(perm)
+        .select_related(
             "repository",
             "repository__organization",
             "repository__owner",
-            "disease",
         )
         .annotate(predictions_count=models.Count("predicts"))
         .filter(predictions_count__gt=0)
+        .distinct()
+        .order_by("-updated")
     )
 
-    if user and (user.is_superuser or user.is_staff):
-        pass
-    elif user:
-        qs = qs.filter(
-            models.Q(repository__active=True)
-            | models.Q(repository__repository_contributors__user=user)
-        ).distinct()
-    else:
-        qs = qs.filter(repository__active=True)
-
-    return qs.order_by("-updated")
+    return list(qs)
 
 
 @router.get(
     "/models/tags/",
     response=List[s.ModelTags],
-    auth=UidKeyAuth(),
+    auth=OptionalJWTAuth(),
     include_in_schema=False,
 )
-@decorate_view(never_cache)
 def models_tags(request, ids: List[int] = Query(None)):
     user = request.auth
 
+    repo_filter = models.Q(repository__active=True)
+
+    if user and user.is_authenticated:
+        if user.is_superuser:
+            repo_filter = models.Q()
+        else:
+            repo_filter |= (
+                models.Q(repository__owner=user)
+                | models.Q(
+                    repository__organization__memberships__user=user,
+                    repository__organization__memberships__role__in=[
+                        "OWNER",
+                        "ADMIN",
+                    ],
+                )
+                | models.Q(
+                    repository__repository_contributors__user=user,
+                    repository__repository_contributors__permission="ADMIN",
+                )
+            )
+
     qs = (
-        m.RepositoryModel.objects.select_related("disease", "repository")
+        m.RepositoryModel.objects.filter(repo_filter)
         .annotate(predictions_count=models.Count("predicts"))
         .filter(predictions_count__gt=0)
     )
 
-    if user and (user.is_superuser or user.is_staff):
-        pass
-    elif user:
-        qs = qs.filter(
-            models.Q(repository__active=True)
-            | models.Q(repository__repository_contributors__user=user)
-        ).distinct()
-    else:
-        qs = qs.filter(repository__active=True)
-
     if ids:
         qs = qs.filter(id__in=ids)
 
+    model_ids = qs.values_list("id", flat=True)
     tags_map = defaultdict(lambda: {"name": "", "models": set()})
 
-    for model in qs:
-        if model.disease:
-            key = ("disease", str(model.disease.id))
-            tags_map[key]["name"] = str(model.disease)
-            tags_map[key]["models"].add(model.id)
+    disease_data = (
+        m.ModelPrediction.objects.filter(model_id__in=model_ids)
+        .values("disease_id", "disease__code", "model_id")
+        .distinct()
+    )
 
-        if model.adm_level is not None:
-            key = ("adm_level", str(model.adm_level))
-            tags_map[key]["name"] = model.get_adm_level_display()
-            tags_map[key]["models"].add(model.id)
+    for item in disease_data:
+        tag_id = f"dis_{item['disease_id']}"
+        key = ("disease", tag_id)
+        tags_map[key]["name"] = str(item["disease__code"])
+        tags_map[key]["models"].add(item["model_id"])
 
-        if model.category:
-            key = ("model_category", str(model.category))
-            tags_map[key]["name"] = model.get_category_display()
-            tags_map[key]["models"].add(model.id)
+    adm_data = (
+        m.ModelPrediction.objects.filter(model_id__in=model_ids)
+        .values("adm_level", "model_id")
+        .distinct()
+    )
 
-        if model.time_resolution:
-            key = ("periodicity", str(model.time_resolution))
-            tags_map[key]["name"] = model.get_time_resolution_display()
-            tags_map[key]["models"].add(model.id)
+    adm_choices = dict(m.ModelPrediction.AdministrativeLevel.choices)
+    for item in adm_data:
+        level = item["adm_level"]
+        tag_id = f"adm_{level}"
+        key = ("adm_level", tag_id)
+        tags_map[key]["name"] = str(adm_choices.get(level, f"Level {level}"))
+        tags_map[key]["models"].add(item["model_id"])
 
-        if model.sprint_id:
-            key = ("IMDC", str(model.sprint_id))
-            tags_map[key]["name"] = (
-                str(model.sprint.year)
-                if model.sprint
-                else f"{model.sprint_id}"
+    other_fields = qs.values(
+        "id", "category", "time_resolution", "sprint_id", "sprint__year"
+    )
+
+    for row in other_fields:
+        mid = row["id"]
+        if row["category"]:
+            tag_id = f"cat_{row['category']}"
+            key = ("model_category", tag_id)
+            tags_map[key]["name"] = str(
+                row["category"].replace("_", " ").title()
             )
-            tags_map[key]["models"].add(model.id)
+            tags_map[key]["models"].add(mid)
 
-    response_data = []
-    for (category, tag_id), data in tags_map.items():
-        response_data.append(
-            {
-                "id": tag_id,
-                "name": data["name"],
-                "category": category,
-                "models": [{"id": mid} for mid in data["models"]],
-            }
-        )
+        if row["time_resolution"]:
+            tag_id = f"per_{row['time_resolution']}"
+            key = ("periodicity", tag_id)
+            tags_map[key]["name"] = str(row["time_resolution"].title())
+            tags_map[key]["models"].add(mid)
 
-    return sorted(response_data, key=lambda x: (x["category"], x["name"]))
+        if row["sprint_id"]:
+            tag_id = f"spr_{row['sprint_id']}"
+            key = ("IMDC", tag_id)
+            tags_map[key]["name"] = (
+                str(row["sprint__year"])
+                if row["sprint__year"]
+                else str(row["sprint_id"])
+            )
+            tags_map[key]["models"].add(mid)
+
+    result = [
+        {
+            "id": tag_id,
+            "name": data["name"],
+            "category": cat,
+            "models": [{"id": mid} for mid in data["models"]],
+        }
+        for (cat, tag_id), data in tags_map.items()
+    ]
+
+    return sorted(result, key=lambda x: (x["category"], x["name"]))
 
 
 @router.get(
@@ -269,7 +316,7 @@ def repository_owner(request, owner: str):
 @router.get(
     "/model/{owner}/{repository}/",
     response={200: s.ModelOut, 404: NotFoundSchema},
-    auth=UidKeyAuth(),
+    auth=OptionalJWTAuth(),
     include_in_schema=False,
 )
 @decorate_view(never_cache)
@@ -279,20 +326,39 @@ def repository_model(request, owner: str, repository: str):
         | models.Q(repository__owner__username=owner)
     )
 
+    not_found = f"Model '{owner}/{repository}' not found"
+
     try:
         model = (
             m.RepositoryModel.objects.select_related(
                 "repository",
                 "repository__organization",
                 "repository__owner",
-                "disease",
             )
             .prefetch_related("repository__repository_contributors__user")
             .annotate(predictions=models.Count("predicts"))
             .get(query)
         )
     except m.RepositoryModel.DoesNotExist:
-        return 404, {"message": f"Model '{owner}/{repository}' not found"}
+        return 404, {"message": not_found}
+
+    if not model.repository.active:
+        user = request.auth
+        print(user)
+        if not user or user.is_anonymous:
+            return 404, {"message": not_found}
+
+        perms = repository_permissions(request, owner, repository)
+
+        can_manage = (
+            perms.get("can_manage")
+            if isinstance(perms, dict)
+            else getattr(perms, "can_manage", False)
+        )
+
+        print(can_manage)
+        if not can_manage:
+            return 404, {"message": not_found}
 
     return model
 
@@ -364,30 +430,99 @@ def repository_readme(request, owner: str, repository: str):
         "gitlab": GitlabProvider,
     }.get(repo.provider)
 
-    if provider_cls:
-        provider = provider_cls(request)
-        access_token = None
-        token_holder = repo.owner
+    if not provider_cls:
+        return 404, {"message": "No OAuth provider found"}
 
-        if not token_holder:
-            admin = m.RepositoryContributor.objects.filter(
-                repository=repo,
-                permission=m.RepositoryContributor.Permissions.ADMIN,
-            ).first()
-            if admin:
-                token_holder = admin.user
+    provider = provider_cls(request)
 
-        if token_holder:
-            oauth_account = token_holder.oauth_accounts.filter(
-                provider=repo.provider
-            ).first()
-            if oauth_account:
-                access_token = oauth_account.access_token
+    token_holder = repo.owner
 
-        content = provider.get_readme(repo, access_token=access_token)
+    if not token_holder:
+        admin = m.RepositoryContributor.objects.filter(
+            repository=repo,
+            permission=m.RepositoryContributor.Permissions.ADMIN,
+        ).first()
+        if admin:
+            token_holder = admin.user
+
+    if not token_holder:
+        return 404, {"message": "Repository admin inaccessible"}
+
+    oauth_account = token_holder.oauth_accounts.filter(
+        provider=repo.provider
+    ).first()
+
+    if oauth_account:
+        try:
+            if (
+                oauth_account.access_token_expires_at
+                and oauth_account.access_token_expires_at
+                < (timezone.now() + timedelta(minutes=5))
+            ):
+                refresh_data = provider.refresh_access_token(
+                    refresh_token=oauth_account.refresh_token
+                )
+
+                oauth_account.access_token = refresh_data["access_token"]
+                oauth_account.refresh_token = refresh_data.get(
+                    "refresh_token", oauth_account.refresh_token
+                )
+
+                expires_in = refresh_data.get("expires_in")
+
+                if expires_in:
+                    oauth_account.access_token_expires_at = (
+                        timezone.now() + timedelta(seconds=expires_in)
+                    )
+
+                with transaction.atomic():
+                    oauth_account.save()
+
+            content = provider.get_readme(repo, oauth_account)
+
+        except Exception:
+            content = None
+
+    if not content and repo.provider == "github":
+        try:
+            url = f"https://api.github.com/repos/{owner}/{repository}/readme"
+
+            headers = {
+                "Accept": "application/vnd.github.raw",
+                "X-GitHub-Api-Version": "2022-11-28",
+            }
+
+            with httpx.Client(timeout=10) as client:
+                resp = client.get(url, headers=headers)
+
+                if resp.status_code == 200:
+                    content = resp.text
+
+        except Exception:
+            content = None
+
+    if not content and repo.provider == "github":
+        branches = ["main", "master"]
+
+        try:
+            with httpx.Client(timeout=10) as client:
+                for branch in branches:
+                    raw_url = (
+                        "https://raw.githubusercontent.com/"
+                        f"{owner}/{repository}/{branch}/README.md"
+                    )
+
+                    resp = client.get(raw_url)
+
+                    if resp.status_code == 200:
+                        content = resp.text
+                        break
+
+        except Exception:
+            content = None
 
     if not content:
-        return 404, {"message": "README not found or inaccessible."}
+        return 404, {"message": "README not found or inaccessible"}
 
     return 200, {"content": content}
 
@@ -426,7 +561,7 @@ def repository_predictions(request, owner: str, repository: str):
         .select_related(
             "model__repository",
             "model__sprint",
-            "model__disease",
+            "disease",
             "adm0",
             "adm1",
             "adm2",
@@ -548,6 +683,42 @@ def update_prediction_published(
     return 201, "ok"
 
 
+@router.patch(
+    "/prediction/{prediction_id}/publish/",
+    response={201: str, 403: dict, 404: dict},
+    auth=UidKeyAuth(),
+    include_in_schema=True,
+)
+def prediction_published(
+    request,
+    prediction_id: int,
+    payload: s.PredictionPublishUpdateIn,
+):
+    try:
+        prediction = m.ModelPrediction.objects.select_related(
+            "model__repository__owner", "model__repository__organization"
+        ).get(id=prediction_id)
+    except m.ModelPrediction.DoesNotExist:
+        return 404, {"message": "Prediction not found"}
+
+    user = request.auth
+    repo = prediction.model.repository
+
+    is_authorized = (
+        repo.owner == user
+        or repo.repository_contributors.filter(user=user).exists()
+        or user.is_superuser
+    )
+
+    if not is_authorized:
+        return 403, {"message": "Permission denied"}
+
+    prediction.published = payload.published
+    prediction.save()
+
+    return 201, "ok"
+
+
 @router.get(
     "/models/{owner}/{repository}/",
     response={
@@ -590,6 +761,84 @@ def get_model(request, owner: str, repository: str):
     return model
 
 
+@router.patch(
+    "/model/{owner}/{repository}/",
+    auth=JWTAuth(),
+    response={
+        201: SuccessSchema,
+        403: ForbiddenSchema,
+        404: NotFoundSchema,
+        400: BadRequestSchema,
+    },
+    include_in_schema=False,
+)
+def model_update(
+    request,
+    owner: str,
+    repository: str,
+    data: s.ModelUpdateIn,
+):
+    perms_response = repository_permissions(request, owner, repository)
+
+    if not perms_response.get("can_manage"):
+        return 403, {
+            "message": "You do not have permission to manage this model"
+        }
+
+    try:
+        query = models.Q(repository__name=repository) & (
+            models.Q(repository__organization__name=owner)
+            | models.Q(repository__owner__username=owner)
+        )
+        model = m.RepositoryModel.objects.get(query)
+
+        if data.active is not None:
+            model.active = data.active
+
+        if data.description is not None:
+            model.description = data.description
+
+        model.save()
+
+        return 201, {"message": "ok"}
+    except m.RepositoryModel.DoesNotExist:
+        return 404, {"message": "Model not found"}
+
+
+@router.delete(
+    "/model/{owner}/{repository}/",
+    auth=JWTAuth(),
+    response={
+        200: SuccessSchema,
+        403: ForbiddenSchema,
+        404: NotFoundSchema,
+    },
+    include_in_schema=False,
+)
+def model_delete(request, owner: str, repository: str):
+    perms_response = repository_permissions(request, owner, repository)
+
+    if isinstance(perms_response, tuple):
+        status_code, data = perms_response
+        return status_code, data
+
+    if not perms_response.get("can_manage"):
+        return 403, {
+            "message": "You do not have permission to delete this model"
+        }
+
+    try:
+        query = models.Q(repository__name=repository) & (
+            models.Q(repository__organization__name=owner)
+            | models.Q(repository__owner__username=owner)
+        )
+        model = m.RepositoryModel.objects.get(query)
+        model.delete()
+        return 200, {"message": "Model deleted successfully"}
+    except m.RepositoryModel.DoesNotExist:
+        return 404, {"message": "Model not found"}
+
+
 @router.get(
     "/models/",
     response=List[s.Model],
@@ -614,10 +863,10 @@ def list_models(
         qs = qs.filter(
             models.Q(repository__active=True)
             | models.Q(repository__repository_contributors__user=user)
-        ).distinct()
+        )
     else:
         qs = qs.filter(repository__active=True)
-    return list(qs.order_by("-updated"))
+    return qs.order_by("-updated").distinct()
 
 
 @router.get(
@@ -633,7 +882,16 @@ def list_predictions(
     filters: PredictionFilterSchema = Query(...),
 ):
     user = request.auth
-    qs = m.ModelPrediction.objects.all()
+    qs = m.ModelPrediction.objects.select_related(
+        "disease",
+        "model",
+        "adm0",
+        "adm1",
+        "adm2",
+        "adm3",
+        "quantitativeprediction",
+    ).all()
+
     qs = filters.filter(qs)
     qs = qs.annotate(
         start_date=models.Min("quantitativeprediction__data__date"),
@@ -649,11 +907,11 @@ def list_predictions(
                 models.Q(published=True)
                 & models.Q(model__repository__active=True)
             )
-        ).distinct()
+        )
     else:
         qs = qs.filter(published=True, model__repository__active=True)
 
-    return qs
+    return qs.distinct()
 
 
 @router.post(
@@ -669,9 +927,9 @@ def list_predictions(
     include_in_schema=True,
 )
 @decorate_view(csrf_exempt)
-def create_prediction(request, payload: s.PredictionIn):
+def create_prediction(request, data: s.PredictionIn):
     user = request.auth
-    repo_owner, repo_name = payload.repository.strip("/").split("/", 1)
+    repo_owner, repo_name = data.repository.strip("/").split("/", 1)
 
     model = (
         m.RepositoryModel.objects.select_related(
@@ -686,21 +944,58 @@ def create_prediction(request, payload: s.PredictionIn):
     )
 
     if not model:
-        return 422, {
-            "message": f"Repository '{payload.repository}' not found."
-        }
+        return 422, {"message": f"Repository '{data.repository}' not found."}
 
-    if model.sprint and payload.case_definition == "reported":
+    try:
+        disease_obj = m.Disease.objects.get(code__iexact=data.disease)
+    except m.Disease.DoesNotExist:
+        return 422, {"message": f"Disease code '{data.disease}' not found."}
+
+    if model.sprint and data.case_definition == "reported":
         return 422, {
             "message": "Predictions for IMDC Sprint must use probable cases"
         }
+
+    try:
+        data = s.PredictionIn.model_validate(
+            data,
+            context={
+                "time_resolution": model.time_resolution,
+                "is_sprint": model.sprint is not None,
+            },
+        )
+    except ValidationError as e:
+        return 422, {"message": e.errors()}
+
+    incoming_preds = [row.pred for row in data.prediction]
+    incoming_hash = hashlib.sha256(
+        json.dumps(incoming_preds).encode()
+    ).hexdigest()
+
+    existing_predictions = m.QuantitativePrediction.objects.filter(
+        model=model
+    ).prefetch_related("data")
+
+    for pred in existing_predictions:
+        existing_preds = list(
+            pred.data.values_list("pred", flat=True).order_by("date")
+        )
+        existing_hash = hashlib.sha256(
+            json.dumps(existing_preds).encode()
+        ).hexdigest()
+
+        if incoming_hash == existing_hash:
+            return 422, {
+                "message": (
+                    "Duplication found for this Prediction within the Model"
+                )
+            }
 
     repo = model.repository
     has_permission = False
 
     if repo.owner == user:
         has_permission = True
-
     elif repo.organization:
         is_org_admin = m.OrganizationMembership.objects.filter(
             organization=repo.organization,
@@ -729,68 +1024,67 @@ def create_prediction(request, payload: s.PredictionIn):
         return (
             403,
             {
-                "message": "You do not have write permission for this repository."
+                "message": (
+                    "You do not have write permission for this repository."
+                )
             },
         )
 
     adms = {"adm0": None, "adm1": None, "adm2": None, "adm3": None}
 
-    adm_config = {
-        m.RepositoryModel.AdministrativeLevel.NATIONAL: (
-            m.Adm0,
-            "adm_0",
-            "adm0",
-        ),
-        m.RepositoryModel.AdministrativeLevel.STATE: (m.Adm1, "adm_1", "adm1"),
-        m.RepositoryModel.AdministrativeLevel.MUNICIPALITY: (
-            m.Adm2,
-            "adm_2",
-            "adm2",
-        ),
-        m.RepositoryModel.AdministrativeLevel.SUB_MUNICIPALITY: (
-            m.Adm3,
-            "adm_3",
-            "adm3",
-        ),
-    }
-
-    config = adm_config.get(model.adm_level)
-
-    if not config:
-        return 500, {
-            "message": (
-                "Server Error: Unknown administrative "
-                f"level find in Model '{model.adm_level}'"
-            )
-        }
-
-    Adm, payload_adm, db_field = config
-    geocode = getattr(payload, payload_adm)
-
-    if not geocode:
-        return 422, {
-            "message": (
-                f"Model requires administrative level {model.adm_level},"
-                f" but '{payload_adm}' is missing or empty."
-            )
-        }
-
     try:
-        adms[db_field] = Adm.objects.get(pk=geocode)
-    except Adm.DoesNotExist:
+        if data.adm_level == 0:
+            adms["adm0"] = m.Adm0.objects.get(geocode=data.adm_0)
+
+        elif data.adm_level == 1:
+            adms["adm1"] = m.Adm1.objects.get(
+                geocode=data.adm_1, country__geocode=data.adm_0
+            )
+            adms["adm0"] = adms["adm1"].country
+
+        elif data.adm_level == 2:
+            adms["adm2"] = m.Adm2.objects.get(
+                geocode=data.adm_2,
+                adm1__geocode=data.adm_1,
+                adm1__country__geocode=data.adm_0,
+            )
+            adms["adm1"] = adms["adm2"].adm1
+            adms["adm0"] = adms["adm1"].country
+
+        elif data.adm_level == 3:
+            adms["adm3"] = m.Adm3.objects.get(
+                geocode=data.adm_3,
+                adm2__geocode=data.adm_2,
+                adm2__adm1__geocode=data.adm_1,
+                adm2__adm1__country__geocode=data.adm_0,
+            )
+            adms["adm2"] = adms["adm3"].adm2
+            adms["adm1"] = adms["adm2"].adm1
+            adms["adm0"] = adms["adm1"].country
+
+    except (m.Adm0.DoesNotExist,):
+        return 422, {"message": f"adm_0 {data.adm_0} not found"}
+    except (m.Adm1.DoesNotExist,):
+        return 422, {"message": f"adm_1 {data.adm_1} - {data.adm_0} not found"}
+    except (m.Adm2.DoesNotExist,):
         return 422, {
             "message": (
-                f"Administrative unit '{geocode}' "
-                f"not found in {Adm._meta.verbose_name}."
+                f"adm_2 {data.adm_2} - {data.adm_1} - {data.adm_0} not found"
             )
+        }
+    except (m.Adm3.DoesNotExist,):
+        return 422, {
+            "message": (f"adm_3 {data.adm_3} not found for specified city")
         }
 
     prediction = m.QuantitativePrediction(
         model=model,
-        commit=payload.commit,
-        description=payload.description,
-        case_definition=payload.case_definition,
-        published=payload.published,
+        disease=disease_obj,
+        commit=data.commit,
+        description=data.description,
+        case_definition=data.case_definition,
+        published=data.published,
+        adm_level=data.adm_level,
         **adms,
     )
 
@@ -808,7 +1102,7 @@ def create_prediction(request, payload: s.PredictionIn):
             upper_90=row.upper_90,
             upper_95=row.upper_95,
         )
-        for row in payload.prediction
+        for row in data.prediction
     ]
 
     if not calling_via_swagger(request):

@@ -1,3 +1,5 @@
+import { FRONTEND_SECRET } from "@/lib/env";
+
 export type DashboardCategory = "quantitative" | "categorical";
 export type CaseDefinition = "reported" | "probable";
 export type AdmLevel = 0 | 1 | 2 | 3;
@@ -22,6 +24,7 @@ export interface PredictionMetadata {
   id: number;
   disease_code: string;
   adm_level: AdmLevel;
+  case_definition: CaseDefinition;
   adm_0_code: string | null;
   adm_1_code: string | null;
   adm_2_code: string | null;
@@ -61,8 +64,34 @@ export interface PredictionRowData {
   upper_95?: number;
 }
 
+const getHeaders = async () => {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "x-internal-secret": FRONTEND_SECRET || "",
+  };
+
+  if (typeof window === "undefined") {
+    const { cookies } = await import("next/headers");
+    const cookieStore = await cookies();
+    const token = cookieStore.get("access_token")?.value;
+    if (token) {
+      headers["cookie"] = `access_token=${token}`;
+    }
+  }
+
+  return headers;
+};
+
+const getBaseUrl = (path: string) => {
+  if (typeof window !== "undefined") return path;
+  const baseUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || "";
+  return `${baseUrl}${path}`;
+};
+
 export const fetchPredictionMetadata = async (predictionId: string): Promise<PredictionMetadata> => {
-  const res = await fetch(`/api/vis/dashboard/prediction/${predictionId}/metadata/`);
+  const res = await fetch(getBaseUrl(`/api/vis/dashboard/prediction/${predictionId}/metadata/`), {
+    headers: await getHeaders(),
+  });
   if (!res.ok) throw new Error("Metadata fetch failed");
   return res.json();
 };
@@ -77,7 +106,9 @@ export const fetchDiseases = async (
     adm_level: admLevel.toString(),
     sprint: sprint.toString(),
   });
-  const res = await fetch(`/api/vis/dashboard/diseases?${params.toString()}`);
+  const res = await fetch(getBaseUrl(`/api/vis/dashboard/diseases?${params.toString()}`), {
+    headers: await getHeaders(),
+  });
   if (!res.ok) throw new Error("Failed to fetch diseases");
   return res.json();
 };
@@ -94,7 +125,9 @@ export const fetchCountries = async (
     disease,
     sprint: sprint.toString()
   });
-  const res = await fetch(`/api/vis/dashboard/countries?${params.toString()}`);
+  const res = await fetch(getBaseUrl(`/api/vis/dashboard/countries?${params.toString()}`), {
+    headers: await getHeaders(),
+  });
   if (!res.ok) throw new Error("Failed to fetch countries");
   return res.json();
 };
@@ -113,7 +146,9 @@ export const fetchStates = async (
     country,
     sprint: sprint.toString(),
   });
-  const res = await fetch(`/api/vis/dashboard/states?${params.toString()}`);
+  const res = await fetch(getBaseUrl(`/api/vis/dashboard/states?${params.toString()}`), {
+    headers: await getHeaders(),
+  });
   if (!res.ok) throw new Error("Failed to fetch states");
   return res.json();
 };
@@ -134,7 +169,9 @@ export const fetchCities = async (
     state,
     sprint: sprint.toString(),
   });
-  const res = await fetch(`/api/vis/dashboard/cities?${params.toString()}`);
+  const res = await fetch(getBaseUrl(`/api/vis/dashboard/cities?${params.toString()}`), {
+    headers: await getHeaders(),
+  });
   if (!res.ok) throw new Error("Failed to fetch cities");
   return res.json();
 };
@@ -153,7 +190,9 @@ export const fetchSprints = async (
   if (admLevel == 1 && state) params.append("state", state);
   if (admLevel == 2 && city) params.append("city", city);
 
-  const res = await fetch(`/api/vis/dashboard/sprints?${params.toString()}`);
+  const res = await fetch(getBaseUrl(`/api/vis/dashboard/sprints?${params.toString()}`), {
+    headers: await getHeaders(),
+  });
   if (!res.ok) throw new Error("Failed to fetch sprints");
   return res.json();
 };
@@ -180,7 +219,9 @@ export const fetchPredictions = async (
   if (admLevel == 1 && state) params.append("state", state);
   if (admLevel == 2 && city) params.append("city", city);
 
-  const res = await fetch(`/api/vis/dashboard/predictions?${params.toString()}`);
+  const res = await fetch(getBaseUrl(`/api/vis/dashboard/predictions?${params.toString()}`), {
+    headers: await getHeaders(),
+  });
   if (!res.ok) throw new Error("Failed to fetch predictions");
   return res.json();
 };
@@ -209,13 +250,17 @@ export const fetchCases = async (
   if (admLevel == 1 && adm1) params.append("adm_1", adm1);
   if (admLevel == 2 && adm2) params.append("adm_2", adm2);
 
-  const res = await fetch(`/api/vis/dashboard/cases?${params.toString()}`);
+  const res = await fetch(getBaseUrl(`/api/vis/dashboard/cases?${params.toString()}`), {
+    headers: await getHeaders(),
+  });
   if (!res.ok) throw new Error("Failed to fetch cases");
   return res.json();
 };
 
 export const fetchPredictionData = async (predictionId: number): Promise<PredictionRowData[]> => {
-  const res = await fetch(`/api/vis/dashboard/prediction/${predictionId}/`);
+  const res = await fetch(getBaseUrl(`/api/vis/dashboard/prediction/${predictionId}/`), {
+    headers: await getHeaders(),
+  });
   if (!res.ok) throw new Error("Failed to fetch prediction data");
   return res.json();
 };

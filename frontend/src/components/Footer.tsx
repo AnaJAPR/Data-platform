@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import Image from "next/image";
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
+import { FaYoutube, FaLinkedin, FaEnvelope } from 'react-icons/fa';
 
 export default function Footer() {
   const { theme, setTheme } = useTheme();
@@ -85,23 +86,33 @@ export default function Footer() {
                 className={`grid transition-all duration-300 ease-in-out ${showCitation ? "grid-rows-[1fr] opacity-100 mt-2" : "grid-rows-[0fr] opacity-0"
                   }`}
               >
-                <div className="overflow-hidden">
-                  <p className="leading-relaxed mb-2 italic bg-muted/10 p-2 rounded border border-border">
-                    {t('footer.cite_text')}
-                  </p>
-                  <a
-                    href="https://arxiv.org/abs/2410.18945"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-500 hover:underline font-medium inline-flex items-center gap-1"
-                  >
-                    {t('footer.cite_link')}
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                      <polyline points="15 3 21 3 21 9" />
-                      <line x1="10" y1="14" x2="21" y2="3" />
-                    </svg>
-                  </a>
+                <div className="overflow-hidden space-y-4">
+                  <div className="bg-muted/10 p-2 rounded border border-border">
+                    <p className="font-bold mb-1 uppercase tracking-wider text-[10px] opacity-70">Preprint:</p>
+                    <p className="leading-relaxed mb-2 italic">
+                      {t('footer.cite_text')}
+                    </p>
+                    <a
+                      href="https://arxiv.org/abs/2410.18945"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-500 hover:underline font-medium inline-flex items-center gap-1"
+                    >
+                      {t('footer.cite_link')}
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                        <polyline points="15 3 21 3 21 9" />
+                        <line x1="10" y1="14" x2="21" y2="3" />
+                      </svg>
+                    </a>
+                  </div>
+
+                  <div className="bg-muted/10 p-2 rounded border border-border">
+                    <p className="font-bold mb-1 uppercase tracking-wider text-[10px] opacity-70">Website:</p>
+                    <p className="leading-relaxed italic">
+                      MOSQLIMATE. Mosqlimate: climate-driven arbovirus modeling and data platform. Available at: https://mosqlimate.org/
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -131,6 +142,7 @@ export default function Footer() {
                   href="mailto:mosqlimate@gmail.com"
                   className="flex items-center gap-2 hover:text-blue-500 transition-colors opacity-80 hover:opacity-100"
                 >
+                  <FaEnvelope className="text-base" />
                   {t('footer.connect_email')}
                 </a>
               </li>
@@ -141,7 +153,19 @@ export default function Footer() {
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 hover:text-red-500 transition-colors opacity-80 hover:opacity-100"
                 >
+                  <FaYoutube className="text-base" />
                   {t('footer.connect_youtube')}
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://www.linkedin.com/company/mosqlimate/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 hover:text-[#0077b5] transition-colors opacity-80 hover:opacity-100"
+                >
+                  <FaLinkedin className="text-base" />
+                  {t('footer.connect_linkedin')}
                 </a>
               </li>
             </ul>

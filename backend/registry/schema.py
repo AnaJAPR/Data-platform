@@ -1,23 +1,24 @@
 import re
 from datetime import date as dt
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, Literal, List
-from pydantic import model_validator, field_validator
+from pydantic import model_validator, field_validator, ValidationInfo
 
+from epiweeks import Week
+import pandas as pd
 from ninja import Field
 from ninja.errors import HttpError
 from django.db.models import Min, Max
 
 from main.schema import Schema
+from .models import ModelPrediction
 
 
 class Model(Schema):
     id: int
     repository: str
     description: Optional[str] = ""
-    disease: str
     category: str
-    adm_level: int
     time_resolution: str
     sprint: Optional[int] = None
     predictions_count: int
@@ -35,10 +36,6 @@ class Model(Schema):
             raise ValueError("Owner not found")
 
         return f"{owner}/{obj.repository.name}"
-
-    @staticmethod
-    def resolve_disease(obj):
-        return obj.disease.code
 
     @staticmethod
     def resolve_sprint(obj):
@@ -64,6 +61,7 @@ class Model(Schema):
 class Prediction(Schema):
     id: int
     model: Model
+    disease: str
     commit: str
     description: str | None = ""
     start: dt | None = None
@@ -72,36 +70,74 @@ class Prediction(Schema):
     case_definition: str
     published: bool
     created_at: datetime
-    adm_0: str | None
+    adm_level: Literal[0, 1, 2, 3]
+    adm_0: str | None = None
     adm_1: int | None = None
     adm_2: int | None = None
     adm_3: int | None = None
 
     @staticmethod
+    def resolve_disease(obj):
+        return obj.disease.code
+
+    @staticmethod
     def resolve_start(obj):
-        return (
-            getattr(obj, "start_date", None)
-            or obj.data.aggregate(d=Min("date"))["d"]
-        )
+        start = getattr(obj, "start_date", None)
+        if start:
+            return start
+        child = getattr(obj, "quantitativeprediction", None)
+        if child:
+            return child.data.aggregate(d=Min("date"))["d"]
+        return None
 
     @staticmethod
     def resolve_end(obj):
-        return (
-            getattr(obj, "end_date", None)
-            or obj.data.aggregate(d=Max("date"))["d"]
-        )
+        end = getattr(obj, "end_date", None)
+        if end:
+            return end
+        child = getattr(obj, "quantitativeprediction", None)
+        if child:
+            return child.data.aggregate(d=Max("date"))["d"]
+        return None
 
     @staticmethod
     def resolve_adm_0(obj):
-        return obj.adm0.geocode if obj.adm0 else None
+        match obj.adm_level:
+            case 0:
+                geocode = obj.adm0.geocode
+            case 1:
+                geocode = obj.adm1.country.geocode
+            case 2:
+                geocode = obj.adm2.adm1.country.geocode
+            case 3:
+                geocode = obj.adm3.adm2.adm1.country.geocode
+            case _:
+                geocode = None
+        return geocode
 
     @staticmethod
     def resolve_adm_1(obj):
-        return obj.adm1.geocode if obj.adm1 else None
+        match obj.adm_level:
+            case 1:
+                geocode = obj.adm1.geocode
+            case 2:
+                geocode = obj.adm2.adm1.geocode
+            case 3:
+                geocode = obj.adm3.adm2.adm1.geocode
+            case _:
+                geocode = None
+        return geocode
 
     @staticmethod
     def resolve_adm_2(obj):
-        return obj.adm2.geocode if obj.adm2 else None
+        match obj.adm_level:
+            case 2:
+                geocode = obj.adm2.geocode
+            case 3:
+                geocode = obj.adm3.adm2.geocode
+            case _:
+                geocode = None
+        return geocode
 
     @staticmethod
     def resolve_adm_3(obj):
@@ -110,7 +146,6 @@ class Prediction(Schema):
     @staticmethod
     def resolve_scores(obj):
         child = getattr(obj, "quantitativeprediction", None)
-
         if not child:
             return {}
 
@@ -124,7 +159,7 @@ class Prediction(Schema):
         ]
 
         return {
-            field: round(getattr(child, field), 2)
+            field.replace("_score", ""): round(getattr(child, field), 2)
             for field in score_fields
             if getattr(child, field, None) is not None
         }
@@ -169,7 +204,8 @@ class PredictionDataRowSchema(Schema):
     @model_validator(mode="after")
     def validate_bounds(cls, values):
         if not (
-            values.lower_95
+            0
+            <= values.lower_95
             <= values.lower_90
             <= values.lower_80
             <= values.lower_50
@@ -180,7 +216,11 @@ class PredictionDataRowSchema(Schema):
             <= values.upper_95
         ):
             raise HttpError(
-                422, "Prediction bounds are not in the correct order"
+                422,
+                (
+                    "Prediction bounds are not in the correct order or "
+                    "contain negative values"
+                ),
             )
         return values
 
@@ -190,6 +230,13 @@ class PredictionIn(Schema):
         ...,
         description="The full repository name in 'owner/name' format.",
         examples="owner/repository-name",
+    )
+    disease: str = Field(
+        description=(
+            "The Disease code. Example: \n"
+            "Dengue fever (classic): 'A90'\n"
+            "Chikungunya fever: 'A92.0'"
+        )
     )
     description: str = Field(
         "",
@@ -208,6 +255,12 @@ class PredictionIn(Schema):
     published: bool = Field(
         True, description="Whether this prediction is visible to the public."
     )
+    adm_level: Literal[0, 1, 2, 3] = Field(
+        description=(
+            "Administrative level: National (0), State (1),"
+            " Municipality (2), Sub-municipality (3)"
+        )
+    )
     adm_0: str = Field("BRA", description="Country ISO code", examples="BRA")
     adm_1: Optional[int] = Field(
         None, description="State geocode", examples="33"
@@ -217,6 +270,97 @@ class PredictionIn(Schema):
     )
     adm_3: Optional[int] = Field(None, description="Sub-municipality geocode")
     prediction: List[PredictionDataRowSchema]
+
+    @model_validator(mode="after")
+    def validate_adm_hierarchy(self) -> "PredictionIn":
+        if self.adm_level >= 0 and not self.adm_0:
+            raise HttpError(
+                422, "adm_0 is required for all administrative levels."
+            )
+
+        if self.adm_level >= 1 and self.adm_1 is None:
+            raise HttpError(
+                422, "adm_1 is required when adm_level is 1 or higher."
+            )
+
+        if self.adm_level >= 2 and self.adm_2 is None:
+            raise HttpError(
+                422, "adm_2 is required when adm_level is 2 or higher."
+            )
+
+        if self.adm_level >= 3 and self.adm_3 is None:
+            raise HttpError(422, "adm_3 is required when adm_level is 3.")
+
+        return self
+
+    @model_validator(mode="after")
+    def validate_prediction(self, info: ValidationInfo) -> "PredictionIn":
+        context = info.context or {}
+        time_res = context.get("time_resolution")
+        is_sprint = context.get("is_sprint", False)
+
+        if not self.prediction:
+            raise HttpError(422, "Prediction list cannot be empty.")
+
+        sorted_data = sorted(self.prediction, key=lambda x: x.date)
+        dates = [p.date for p in sorted_data]
+
+        if len(dates) != len(set(dates)):
+            raise HttpError(422, "Duplicate dates found in predictions.")
+
+        if is_sprint:
+            df_dates = pd.to_datetime(dates)
+            year = df_dates.year.max()
+
+            expected_range = pd.date_range(
+                start=Week(year - 1, 41).startdate(),
+                end=Week(year, 40).startdate(),
+                freq="W-SUN",
+            )
+
+            missing_dates = expected_range.difference(df_dates)
+
+            if not missing_dates.empty:
+                missing_str = ", ".join(missing_dates.strftime("%Y-%m-%d"))
+                raise HttpError(
+                    422,
+                    (
+                        "The following dates are missing from your"
+                        f" predictions: {missing_str}."
+                    ),
+                )
+
+        for i in range(len(dates) - 1):
+            diff = dates[i + 1] - dates[i]
+            if time_res == "week" and diff != timedelta(weeks=1):
+                raise HttpError(
+                    422,
+                    (
+                        "Gap detected: missing week "
+                        f"between {dates[i]} and {dates[i + 1]}."
+                    ),
+                )
+            elif time_res == "day" and diff != timedelta(days=1):
+                raise HttpError(
+                    422,
+                    (
+                        f"Gap detected: missing day between "
+                        f"{dates[i]} and {dates[i + 1]}."
+                    ),
+                )
+
+        for p in self.prediction:
+            ew = Week.fromdate(p.date)
+            if time_res == "week" and ew.startdate() != p.date:
+                raise HttpError(
+                    422,
+                    (
+                        f"Date {p.date} is not the start of CDC "
+                        f"week {ew.week} (Sunday)."
+                    ),
+                )
+
+        return self
 
     @field_validator("repository")
     @classmethod
@@ -241,10 +385,6 @@ class PredictionIn(Schema):
             raise HttpError(422, "`commit` must be a full 40-character hash.")
         return v.lower()
 
-    @model_validator(mode="before")
-    def validate_adm_levels(cls, values):
-        return values
-
 
 class ModelSummary(Schema):
     id: int
@@ -262,9 +402,19 @@ class ModelThumbs(Schema):
     owner: str
     repository: str
     avatar_url: Optional[str] = None
-    disease: str
+    diseases: List[str]
     predictions: int
     last_update: float
+    category_display: Optional[str] = None
+    time_resolution_display: Optional[str] = None
+    adm_levels: List[str]
+    imdc_year: Optional[str] = None
+
+    @staticmethod
+    def resolve_imdc_year(obj):
+        if obj.sprint:
+            return f"IMDC {obj.sprint.year}"
+        return None
 
     @staticmethod
     def resolve_model_id(obj):
@@ -289,8 +439,10 @@ class ModelThumbs(Schema):
         return None
 
     @staticmethod
-    def resolve_disease(obj):
-        return obj.disease.code
+    def resolve_diseases(obj):
+        return list(
+            obj.predicts.values_list("disease__code", flat=True).distinct()
+        )
 
     @staticmethod
     def resolve_predictions(obj):
@@ -300,6 +452,28 @@ class ModelThumbs(Schema):
     def resolve_last_update(obj):
         return obj.updated.timestamp()
 
+    @staticmethod
+    def resolve_category_display(obj):
+        return obj.get_category_display() if obj.category else None
+
+    @staticmethod
+    def resolve_time_resolution_display(obj):
+        return (
+            obj.get_time_resolution_display() if obj.time_resolution else None
+        )
+
+    @staticmethod
+    def resolve_adm_levels(obj):
+        levels = (
+            obj.predicts.values_list("adm_level", flat=True)
+            .distinct()
+            .order_by("adm_level")
+        )
+
+        choices = dict(ModelPrediction.AdministrativeLevel.choices)
+
+        return [str(choices.get(level, level)) for level in levels]
+
 
 class ModelIncludeInit(Schema):
     repo_id: int
@@ -308,9 +482,7 @@ class ModelIncludeInit(Schema):
     repo_private: bool
     repo_provider: Literal["github", "gitlab"]
     repo_avatar_url: str | None = None
-    disease_id: int
     time_resolution: Literal["day", "week", "month", "year"]
-    adm_level: Literal[0, 1, 2, 3]
     category: Literal[
         "quantitative",
         "categorical",
@@ -331,10 +503,10 @@ class ModelOut(Schema):
     owner: str
     repository: str
     description: str | None
-    disease: str
+    diseases: list[str]
     category: str
-    adm_level: int
     time_resolution: str
+    adm_levels: list[int]
     predictions: int
     contributors: list[ContributorOut]
 
@@ -347,12 +519,22 @@ class ModelOut(Schema):
         raise ValueError("Owner not found")
 
     @staticmethod
-    def resolve_repository(obj):
-        return obj.repository.name
+    def resolve_diseases(obj):
+        return list(
+            obj.predicts.values_list("disease__code", flat=True).distinct()
+        )
 
     @staticmethod
-    def resolve_disease(obj):
-        return obj.disease.name
+    def resolve_adm_levels(obj):
+        return (
+            obj.predicts.values_list("adm_level", flat=True)
+            .distinct()
+            .order_by("adm_level")
+        )
+
+    @staticmethod
+    def resolve_repository(obj):
+        return obj.repository.name
 
     @staticmethod
     def resolve_contributors(obj):
@@ -379,6 +561,11 @@ class ModelOut(Schema):
         ]
 
 
+class ModelUpdateIn(Schema):
+    active: Optional[bool] = None
+    description: Optional[str] = None
+
+
 class ModelDescriptionIn(Schema):
     description: str
 
@@ -398,10 +585,10 @@ class ModelPredictionOut(Schema):
     case_definition: str
     published: bool
     created_at: datetime
-    disease_code: str = Field(alias="model.disease.code")
+    disease_code: str = Field(alias="disease.code")
     category: str = Field(alias="model.category")
-    adm_level: int = Field(alias="model.adm_level")
     sprint: int | None
+    adm_level: int
     adm_0_name: str | None
     adm_0_code: str | None
     adm_1_name: str | None

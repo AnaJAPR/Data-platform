@@ -1,10 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { usePathname } from "next/navigation";
 import { Series, QuantitativePrediction } from "@/components/dashboard/QuantitativeLineChart";
 import { Loader2 } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import { useDashboard } from "@/context/Dashboard";
 import {
   fetchDiseases,
@@ -44,15 +42,15 @@ const CHART_COLORS = [
 ];
 
 export default function DashboardClient({ category }: DashboardClientProps) {
-  const { t } = useTranslation("common");
-  const pathname = usePathname();
   const { state: inputs, updateState: setInputs } = useDashboard();
 
   const [loading, setLoading] = useState(false);
   const [chartData, setChartData] = useState<Series>({ labels: [], data: [] });
   const [chartPredictions, setChartPredictions] = useState<QuantitativePrediction[]>([]);
   const [loadingPredictions, setLoadingPredictions] = useState<number[]>([]);
-  const [activeIntervals, setActiveIntervals] = useState<Set<number>>(new Set());
+
+  const [globalIntervals, setGlobalIntervals] = useState<Set<string>>(new Set(["50", "90"]));
+  const [visibleBounds, setVisibleBounds] = useState<Set<number>>(new Set());
 
   const [diseaseOptions, setDiseaseOptions] = useState<DiseaseOption[]>([]);
   const [countryOptions, setCountryOptions] = useState<Option[]>([]);
@@ -73,21 +71,39 @@ export default function DashboardClient({ category }: DashboardClientProps) {
   const [predictionSearch, setPredictionSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
-  const isSyncing = useRef(true);
   const initialPredId = useRef<string | null>(inputs.prediction_id);
+  const requestRef = useRef(0);
+  const chartRequestRef = useRef(0);
 
   const [sortConfig, setSortConfig] = useState<{
     key: string | null;
     direction: "asc" | "desc";
   }>({ key: null, direction: "asc" });
 
+  const toggleGlobalInterval = useCallback((interval: string) => {
+    setGlobalIntervals(prev => {
+      const next = new Set(prev);
+      if (next.has(interval)) next.delete(interval);
+      else next.add(interval);
+      return next;
+    });
+  }, []);
+
+  const toggleIndividualVisibility = useCallback((predictionId: number) => {
+    setVisibleBounds(prev => {
+      const next = new Set(prev);
+      if (next.has(predictionId)) next.delete(predictionId);
+      else next.add(predictionId);
+      return next;
+    });
+  }, []);
+
   const loadSinglePredictionData = useCallback(async (predictionId: number) => {
     setLoadingPredictions(prev => [...prev, predictionId]);
     try {
       const data = await fetchPredictionData(predictionId);
       const newPrediction: QuantitativePrediction = {
-        id: predictionId,
-        color: CHART_COLORS[predictionId % CHART_COLORS.length],
+        id: predictionId, color: CHART_COLORS[predictionId % CHART_COLORS.length],
         data: {
           labels: data.map(d => new Date(d.date)),
           data: data.map(d => d.pred),
@@ -109,117 +125,92 @@ export default function DashboardClient({ category }: DashboardClientProps) {
     }
   }, []);
 
-  const initializeDashboard = useCallback(async () => {
-    setDiseasesLoading(true);
-    isSyncing.current = true;
-
+  const syncPredictions = useCallback(async (requestId: number) => {
+    setPredictionsLoading(true);
     try {
-      const diseases = await fetchDiseases(category, inputs.adm_level, inputs.sprint);
-      setDiseaseOptions(diseases);
-
-      let d = inputs.disease;
-      if (diseases.length > 0 && (!d || !diseases.some(opt => opt.code === d))) d = diseases[0].code;
-
-      let a0 = inputs.adm_0;
-      if (d) {
-        setCountriesLoading(true);
-        const countries = await fetchCountries(category, inputs.adm_level, d, inputs.sprint);
-        setCountryOptions(countries);
-        if (countries.length > 0 && (!a0 || !countries.some(opt => opt.geocode === a0))) a0 = countries[0].geocode;
-      }
-
-      let a1 = inputs.adm_1;
-      if (d && a0 && inputs.adm_level >= 1) {
-        setStatesLoading(true);
-        const states = await fetchStates(category, inputs.adm_level, d, a0, inputs.sprint);
-        setStateOptions(states);
-        if (states.length > 0 && (!a1 || !states.some(opt => opt.geocode === a1))) a1 = states[0].geocode;
-      }
-
-      let a2 = inputs.adm_2;
-      if (d && a0 && a1 && inputs.adm_level >= 2) {
-        setCitiesLoading(true);
-        const cities = await fetchCities(category, inputs.adm_level, d, a0, a1, inputs.sprint);
-        setCityOptions(cities);
-        if (cities.length > 0 && (!a2 || !cities.some(opt => opt.geocode === a2))) a2 = cities[0].geocode;
-      }
-
-      setInputs({ disease: d, adm_0: a0, adm_1: a1, adm_2: a2 });
-
       const [sprints, preds] = await Promise.all([
-        fetchSprints(category, inputs.adm_level, d, a0, a1, a2),
-        fetchPredictions(category, inputs.adm_level, d, inputs.case_definition, a0, a1, a2, inputs.sprint),
+        fetchSprints(category, inputs.adm_level, inputs.disease, inputs.adm_0, inputs.adm_1, inputs.adm_2),
+        fetchPredictions(category, inputs.adm_level, inputs.disease, inputs.case_definition, inputs.adm_0, inputs.adm_1, inputs.adm_2, inputs.sprint),
       ]);
-
+      if (requestRef.current !== requestId) return;
       setSprintOptions(sprints);
       setPredictions(preds);
+    } finally {
+      if (requestRef.current === requestId) setPredictionsLoading(false);
+    }
+  }, [category, inputs.adm_level, inputs.disease, inputs.adm_0, inputs.adm_1, inputs.adm_2, inputs.case_definition, inputs.sprint]);
 
-      if (initialPredId.current) {
-        const target = preds.find(p => p.id === parseInt(initialPredId.current!));
-        if (target) {
-          await loadSinglePredictionData(target.id);
+  useEffect(() => {
+    const requestId = ++requestRef.current;
+
+    const runInitialization = async () => {
+      setDiseasesLoading(true);
+      let { disease: d, adm_0: a0, adm_1: a1, adm_2: a2 } = inputs;
+
+      try {
+        const diseases = await fetchDiseases(category, inputs.adm_level, inputs.sprint);
+        if (requestRef.current !== requestId) return;
+        setDiseaseOptions(diseases);
+        if (diseases.length > 0 && !d) d = diseases[0].code;
+
+        if (d) {
+          setCountriesLoading(true);
+          const countries = await fetchCountries(category, inputs.adm_level, d, inputs.sprint);
+          if (requestRef.current !== requestId) return;
+          setCountryOptions(countries);
+          if (countries.length > 0 && !a0) a0 = countries[0].geocode;
+        }
+
+        if (d && a0 && inputs.adm_level >= 1) {
+          setStatesLoading(true);
+          const states = await fetchStates(category, inputs.adm_level, d, a0, inputs.sprint);
+          if (requestRef.current !== requestId) return;
+          setStateOptions(states);
+          if (states.length > 0 && !a1) a1 = states[0].geocode;
+        }
+
+        if (d && a0 && a1 && inputs.adm_level >= 2) {
+          setCitiesLoading(true);
+          const cities = await fetchCities(category, inputs.adm_level, d, a0, a1, inputs.sprint);
+          if (requestRef.current !== requestId) return;
+          setCityOptions(cities);
+          if (cities.length > 0 && !a2) a2 = cities[0].geocode;
+        }
+
+        setInputs({ disease: d, adm_0: a0, adm_1: a1, adm_2: a2 });
+        await syncPredictions(requestId);
+
+        if (initialPredId.current) {
+          const targetId = parseInt(initialPredId.current);
+          await loadSinglePredictionData(targetId);
           initialPredId.current = null;
           setInputs({ prediction_id: null });
         }
-      }
-
-      isSyncing.current = false;
-    } finally {
-      setDiseasesLoading(false);
-      setCountriesLoading(false);
-      setStatesLoading(false);
-      setCitiesLoading(false);
-    }
-  }, [category, inputs.adm_level, inputs.sprint, inputs.case_definition, setInputs, loadSinglePredictionData]);
-
-  useEffect(() => {
-    setChartPredictions([]);
-    setActiveIntervals(new Set());
-    initializeDashboard();
-  }, [category, inputs.adm_level, inputs.sprint]);
-
-  useEffect(() => {
-    if (isSyncing.current) return;
-
-    const updateDependentParams = async () => {
-      setPredictionsLoading(true);
-      try {
-        const [sprints, preds] = await Promise.all([
-          fetchSprints(category, inputs.adm_level, inputs.disease, inputs.adm_0, inputs.adm_1, inputs.adm_2),
-          fetchPredictions(category, inputs.adm_level, inputs.disease, inputs.case_definition, inputs.adm_0, inputs.adm_1, inputs.adm_2, inputs.sprint),
-        ]);
-        setSprintOptions(sprints);
-        setPredictions(preds);
       } finally {
-        setPredictionsLoading(false);
+        if (requestRef.current === requestId) {
+          setDiseasesLoading(false);
+          setCountriesLoading(false);
+          setStatesLoading(false);
+          setCitiesLoading(false);
+        }
       }
     };
 
-    updateDependentParams();
-  }, [
-    inputs.disease,
-    inputs.adm_0,
-    inputs.adm_1,
-    inputs.adm_2,
-    inputs.case_definition,
-  ]);
+    setChartPredictions([]);
+    setVisibleBounds(new Set());
+    runInitialization();
+  }, [category, inputs.adm_level, inputs.sprint, inputs.disease, inputs.adm_0, inputs.adm_1, inputs.adm_2, inputs.case_definition]);
 
   const loadChartData = useCallback(async () => {
-    if (isSyncing.current || !inputs.disease || !inputs.adm_0) return;
+    const requestId = ++chartRequestRef.current;
+    if (!inputs.disease || !inputs.adm_0 || predictions.length === 0) return;
 
-    let startStr = "";
-    let endStr = "";
+    const starts = predictions.map(p => p.start).filter(Boolean);
+    const ends = predictions.map(p => p.end).filter(Boolean);
+    if (!starts.length || !ends.length) return;
 
-    if (predictions.length > 0) {
-      const starts = predictions.map(p => p.start).filter(Boolean);
-      const ends = predictions.map(p => p.end).filter(Boolean);
-      if (starts.length > 0 && ends.length > 0) {
-        startStr = starts.reduce((a, b) => (a! < b! ? a : b))!;
-        endStr = ends.reduce((a, b) => (a! > b! ? a : b))!;
-      }
-    }
-
-    if (!startStr || !endStr) return;
+    const startStr = starts.reduce((a, b) => (a < b ? a : b));
+    const endStr = ends.reduce((a, b) => (a > b ? a : b));
 
     setLoading(true);
     try {
@@ -234,25 +225,14 @@ export default function DashboardClient({ category }: DashboardClientProps) {
         inputs.adm_1,
         inputs.adm_2
       );
-      setChartData({
-        labels: data.map(d => new Date(d.date)),
-        data: data.map(d => d.cases),
-      });
+      if (requestId !== chartRequestRef.current) return;
+      setChartData({ labels: data.map(d => new Date(d.date)), data: data.map(d => d.cases) });
     } catch {
-      setChartData({ labels: [], data: [] });
+      if (requestId === chartRequestRef.current) setChartData({ labels: [], data: [] });
     } finally {
-      setLoading(false);
+      if (requestId === chartRequestRef.current) setLoading(false);
     }
-  }, [
-    inputs.disease,
-    inputs.adm_level,
-    inputs.sprint,
-    inputs.case_definition,
-    inputs.adm_0,
-    inputs.adm_1,
-    inputs.adm_2,
-    predictions,
-  ]);
+  }, [inputs.disease, inputs.adm_0, inputs.adm_1, inputs.adm_2, inputs.adm_level, inputs.case_definition, inputs.sprint, predictions]);
 
   useEffect(() => {
     loadChartData();
@@ -265,9 +245,12 @@ export default function DashboardClient({ category }: DashboardClientProps) {
     if (selectedModels.length > 0) result = result.filter(p => selectedModels.includes(p.repository));
     if (predictionSearch.trim() !== "") {
       const q = predictionSearch.toLowerCase();
-      result = result.filter(p => p.id.toString().includes(q) || p.owner.toLowerCase().includes(q) || p.repository.toLowerCase().includes(q));
+      result = result.filter(p =>
+        p.id.toString().includes(q) ||
+        p.owner.toLowerCase().includes(q) ||
+        p.repository.toLowerCase().includes(q)
+      );
     }
-
     const selectedIds = new Set(chartPredictions.map(p => p.id));
     return [...result].sort((a, b) => {
       const sA = selectedIds.has(a.id), sB = selectedIds.has(b.id);
@@ -299,18 +282,15 @@ export default function DashboardClient({ category }: DashboardClientProps) {
         isConfigLoading={isConfigLoading}
         inputs={inputs}
         handleChange={(e) => {
-          const { name, value, type } = e.target;
-          const newValue = type === "checkbox" ? (e.target as HTMLInputElement).checked : value;
-          setInputs({ [name]: newValue });
-          if (["disease", "adm_0", "adm_1", "adm_2"].includes(name)) {
-            setChartPredictions([]);
-            setActiveIntervals(new Set());
-          }
+          const { name, value } = e.target;
+          const updates: any = { ...inputs, [name]: value };
+          if (name === "disease") { updates.adm_0 = ""; updates.adm_1 = ""; updates.adm_2 = ""; }
+          else if (name === "adm_0") { updates.adm_1 = ""; updates.adm_2 = ""; }
+          else if (name === "adm_1") { updates.adm_2 = ""; }
+          setInputs(updates);
         }}
         handleCaseDefinitionChange={(def) => setInputs({ case_definition: def as any })}
-        toggleSprint={(year) =>
-          setSelectedSprints(prev => prev.includes(year) ? prev.filter(y => y !== year) : [...prev, year])
-        }
+        toggleSprint={(year) => setSelectedSprints(prev => prev.includes(year) ? prev.filter(y => y !== year) : [...prev, year])}
         selectedSprints={selectedSprints}
         diseaseOptions={diseaseOptions}
         countryOptions={countryOptions}
@@ -325,7 +305,9 @@ export default function DashboardClient({ category }: DashboardClientProps) {
         caseDefinition={inputs.case_definition}
         chartData={chartData}
         chartPredictions={chartPredictions}
-        activeIntervals={activeIntervals}
+        globalIntervals={globalIntervals}
+        visibleBounds={visibleBounds}
+        isHistoricalLoading={loading}
       />
 
       <DashboardPredictions
@@ -341,32 +323,36 @@ export default function DashboardClient({ category }: DashboardClientProps) {
         paginatedPredictions={filteredAndSortedPredictions.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)}
         chartPredictions={chartPredictions}
         loadingPredictions={loadingPredictions}
-        activeIntervals={activeIntervals}
-        togglePrediction={(p) => {
+        globalIntervals={globalIntervals}
+        toggleGlobalInterval={toggleGlobalInterval}
+        visibleBounds={visibleBounds}
+        toggleIndividualVisibility={toggleIndividualVisibility}
+        togglePredictionLine={(p) => {
           const isSelected = chartPredictions.some(cp => cp.id === p.id);
           if (isSelected) {
             setChartPredictions(prev => prev.filter(cp => cp.id !== p.id));
-            setActiveIntervals(prev => { const n = new Set(prev); n.delete(p.id); return n; });
           } else {
             loadSinglePredictionData(p.id);
           }
         }}
-        toggleInterval={(id) =>
-          setActiveIntervals(prev => {
-            const n = new Set(prev);
-            n.has(id) ? n.delete(id) : n.add(id);
-            return n;
-          })
+        handleSort={(key) =>
+          setSortConfig(prev => ({
+            key,
+            direction: prev.key === key ? (prev.direction === "asc" ? "desc" : "asc") : "asc"
+          }))
         }
-        handleSort={(key) => setSortConfig(prev => ({ key, direction: prev.key === key ? (prev.direction === "asc" ? "desc" : "asc") : "asc" }))}
         sortConfig={sortConfig}
         handleSelectAll={async () => {
-          const unselected = filteredAndSortedPredictions.filter(p => !chartPredictions.some(cp => cp.id === p.id)).slice(0, 10);
+          const pageItems = filteredAndSortedPredictions.slice(
+            (currentPage - 1) * ITEMS_PER_PAGE,
+            currentPage * ITEMS_PER_PAGE
+          );
+          const unselected = pageItems.filter(p => !chartPredictions.some(cp => cp.id === p.id));
           await Promise.all(unselected.map(p => loadSinglePredictionData(p.id)));
         }}
         handleClearAll={() => {
           setChartPredictions([]);
-          setActiveIntervals(new Set());
+          setVisibleBounds(new Set());
         }}
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}

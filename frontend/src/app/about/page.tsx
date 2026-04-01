@@ -28,6 +28,7 @@ function FadeInSection({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+
 function ScrollIndicator({ label }: { label: string }) {
   const [isVisible, setIsVisible] = useState(true);
 
@@ -66,7 +67,6 @@ function ScrollIndicator({ label }: { label: string }) {
     </div>
   );
 }
-
 
 const roleColorMap: Record<string, string> = {
   "coordination": "bg-emerald-500",
@@ -129,19 +129,11 @@ const team = [
   },
   {
     id: "lua",
-    name: "Luã Bida Vacaro",
+    name: "Luã Vacaro",
     roleKey: "developer_data_scientist",
     image: "/team/lua.png",
     linkedin: "https://www.linkedin.com/in/luabida/",
     lattes: "http://lattes.cnpq.br/2917646970654963",
-  },
-  {
-    id: "lucas",
-    name: "Lucas Monteiro Bianchi",
-    roleKey: "data_scientist",
-    image: "/team/Lucas.webp",
-    linkedin: "https://www.linkedin.com/in/lucas-bianchi-19730993/",
-    lattes: "http://lattes.cnpq.br/5099258319176445",
   },
   {
     id: "fabiana",
@@ -184,12 +176,12 @@ const team = [
     lattes: "http://lattes.cnpq.br/7574860145017597",
   },
   {
-    id: "ana",
-    name: "Ana Júlia Amaro",
-    roleKey: "undergrad",
-    image: "/team/ana.jpg",
-    linkedin: "https://www.linkedin.com/in/anajuliaamaropereirarocha/",
-    lattes: "http://lattes.cnpq.br/1163109559638032",
+    id: "joyce",
+    name: "Joyce Figueiró Braga",
+    roleKey: "grad",
+    image: "/team/joyce.jpeg",
+    linkedin: "https://www.linkedin.com/in/joyce-figueiró-braga-51784425/",
+    lattes: "http://lattes.cnpq.br/9948080229720839",
   },
   {
     id: "ezequiel",
@@ -202,7 +194,7 @@ const team = [
   {
     id: "zuilho",
     name: "Zuilho Segundo",
-    roleKey: "undergrad",
+    roleKey: "grad",
     image: "/team/Zuilho.webp",
     linkedin: "https://www.linkedin.com/in/ZuilhoSe/",
     lattes: "http://lattes.cnpq.br/4620754984831209",
@@ -214,6 +206,14 @@ const team = [
     image: "/team/Sillas.jpg",
     linkedin: "https://www.linkedin.com/in/scrocha/",
     lattes: "http://lattes.cnpq.br/8756293715832747",
+  },
+  {
+    id: "ana",
+    name: "Ana Júlia Amaro",
+    roleKey: "undergrad",
+    image: "/team/ana.jpg",
+    linkedin: "https://www.linkedin.com/in/anajuliaamaropereirarocha/",
+    lattes: "http://lattes.cnpq.br/1163109559638032",
   },
   {
     id: "raquel",
@@ -248,7 +248,6 @@ const team = [
     lattes: "http://lattes.cnpq.br/5725434538672496",
   },
 ];
-
 
 export default function AboutPage() {
   const { t } = useTranslation("common");
@@ -323,7 +322,7 @@ export default function AboutPage() {
                   </div>
 
                 </div>
-                
+
               </FadeInSection>
             ))}
             <ScrollIndicator label={t("home.scroll")} />
