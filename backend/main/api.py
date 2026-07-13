@@ -1,13 +1,17 @@
 import os
 import json
+import math
+from typing import Any
 
 from ninja import Router, Swagger
 from ninja import NinjaAPI as API
+from ninja.renderers import BaseRenderer
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.cache import never_cache
 from django.conf import settings
 from django.http import HttpResponse, JsonResponse
 from django.middleware.csrf import get_token
+from django.core.serializers.json import DjangoJSONEncoder
 
 from registry.api import router as registry_router
 from datastore.api import router as datastore_router
@@ -18,12 +22,32 @@ from main.APILog.api import router as log_router
 from users.auth import InvalidUIDKey
 from main.schema import NotFoundSchema, MunicipalityInfoSchema, StateInfoSchema
 from main.utils import UF_CODES, UFs
+from main.throttle import APIThrottle
 
 os.environ["NINJA_SKIP_REGISTRY"] = "yes"
 
 MUN_FILE = settings.BASE_DIR / "static/data/geo/BR/municipios.json"
 with open(MUN_FILE, "r") as file:
     MUN_DATA = json.load(file)
+
+
+class SafeJSONRenderer(BaseRenderer):
+    media_type = "application/json"
+
+    def render(self, request, data, *, response_status):
+        def clean_data(obj: Any) -> Any:
+            if isinstance(obj, float) and math.isnan(obj):
+                return None
+            elif isinstance(obj, dict):
+                return {k: clean_data(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [clean_data(v) for v in obj]
+            elif hasattr(obj, "model_dump"):
+                return clean_data(obj.model_dump())
+            return obj
+
+        cleaned_data = clean_data(data)
+        return json.dumps(cleaned_data, cls=DjangoJSONEncoder)
 
 
 class NinjaAPI(API):
@@ -48,6 +72,7 @@ api = NinjaAPI(
     version="1",
     docs=Swagger(),
     docs_url="/docs",
+    renderer=SafeJSONRenderer(),
 )
 
 router = Router()
@@ -55,7 +80,7 @@ router = Router()
 api.add_router("/", router=router)
 api.add_router("/registry/", router=registry_router)
 api.add_router("/user/", router=users_router)
-api.add_router("/datastore/", router=datastore_router)
+api.add_router("/datastore/", router=datastore_router, throttle=APIThrottle())
 api.add_router("/vis/", router=vis_router)
 api.add_router("/maps/", router=maps_router)
 api.add_router("/log/", router=log_router)

@@ -394,6 +394,23 @@
     }
   },
   "datastore": {
+    "vegetation": {
+      "title": "Índices de Vegetación",
+      "description": "Este endpoint proporciona acceso a métricas de índices de vegetación (como NDVI y EVI) con resolución diaria, abarcando todos los municipios brasileños. Los valores se extraen de imágenes de satélite y se agregan a nivel municipal para apoyar el modelado ambiental y de salud pública. Para detalles de uso, parámetros de solicitud y ejemplos, consulte la documentación de la API",
+      "variables": {
+        "date": "Fecha de la observación",
+        "geocode": "Código de municipio del IBGE",
+        "collection": "Identificador de la colección de datos de satélite",
+        "attribute": "Tipo de métrica o banda observada (por ejemplo, ndvi, evi)",
+        "mean": "Valor medio del atributo dentro del área del municipio",
+        "std": "Valor de la desviación estándar del atributo dentro del área del municipio",
+        "median": "Valor de la mediana del atributo dentro del área del municipio",
+        "q25": "Primer cuartil (percentil 25) del atributo dentro del área del municipio",
+        "q75": "Tercer cuartil (percentil 75) del atributo dentro del área del municipio",
+        "min": "Valor mínimo registrado dentro del área del municipio",
+        "max": "Valor máximo registrado dentro del área del municipio"
+      }
+    },
     "infodengue": {
       "title": "Enfermedades transmitidas por mosquitos",
       "description": "Este endpoint proporciona, a través de Mosqlimate, acceso al conjunto de datos epidemiológicos del proyecto InfoDengue con una resolución semanal, que abarca todos los municipios brasileños. Los indicadores y variables disponibles se derivan de datos oficiales de vigilancia de la salud pública en Brasil y son procesados ​​y estandarizados por InfoDengue para facilitar el monitoreo y modelado de arbovirus. Para obtener detalles de uso, parámetros de solicitud y ejemplos, consulte la documentación de la API",
@@ -522,7 +539,7 @@
         "title": "Webinario: Preparándose para la temporada de dengue de 2025",
         "link_text": "Ver Grabación"
       },
-      "series_title": "Serie de Seminarios Mensuales 2025"
+      "series_title": "Seminarios"
     },
     "items": {
       "araujo_cnmac_2023": "ARAUJO, E. C.; COELHO, FLÁVIO CODEÇO . Evaluating transfer learning for forecasting chikungunya cases. In: XLII CNMAC, 2023, Bonito - MS. Proceeding Series of the Brazilian Society of Computational and Applied Mathematics, 2023. v. 10.",
@@ -663,7 +680,42 @@
     "no_found": "No se encontraron predicciones para este modelo.",
     "saving": "Guardando...",
     "published": "Publicado",
-    "view_dashboard": "Ver Dashboard Completo"
+    "view_dashboard": "Ver Dashboard Completo",
+    "pred_count": "{{count}} predicciones cargadas",
+    "draft": "Borrador",
+    "copy_id": "Copiar ID de predicción",
+    "copied": "¡Copiado!",
+    "pub_label": "Pub",
+    "score_label": "PUNTUACIÓN",
+    "view_chart": "Ver Gráfico",
+    "view_table": "Ver Tabla de Datos",
+    "download_csv": "Descargar CSV",
+    "total_pred": "Total",
+    "diseases": "Enfermedades",
+    "score_range": "Rango de puntuación",
+    "clear_filters": "Limpiar",
+    "cases_label": "casos",
+    "per_page": "{{size}} / página",
+    "disease_filter": "Enfermedad",
+    "col_id": "ID",
+    "col_date": "Fecha",
+    "col_disease": "Enfermedad",
+    "col_location": "Ubicación",
+    "col_adm": "ADM",
+    "col_score": "Puntuación",
+    "col_status": "Estado",
+    "col_actions": "Acciones",
+    "table_date": "fecha",
+    "table_pred": "pred",
+    "lower_upper_bounds": "lower_{{b}} - upper_{{b}}",
+    "sort_newest": "Más recientes",
+    "sort_oldest": "Más antiguos",
+    "sort_best": "Mejor puntuación",
+    "sort_worst": "Peor puntuación",
+    "sort_id_desc": "Mayor ID",
+    "sort_id_asc": "Menor ID",
+    "grid_view": "Vista en cuadrícula",
+    "list_view": "Vista en lista"
   },
   "profile": {
     "title": "Perfil",

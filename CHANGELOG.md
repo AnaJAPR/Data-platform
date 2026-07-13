@@ -1,6 +1,98 @@
 Release Notes
 ---
 
+## [2.10.1](https://github.com/Mosqlimate-project/Data-platform/compare/2.10.0...2.10.1) (2026-07-07)
+
+
+### Bug Fixes
+
+* **registry:** update model's updated date when a prediction is included ([#525](https://github.com/Mosqlimate-project/Data-platform/issues/525)) ([e8a3ab9](https://github.com/Mosqlimate-project/Data-platform/commit/e8a3ab9c1c0734f0cd15d787faa2c558879650e8))
+
+# [2.10.0](https://github.com/Mosqlimate-project/Data-platform/compare/2.9.2...2.10.0) (2026-07-06)
+
+
+### Features
+
+* **registry:** include repository link on models page and fix avatars ([#523](https://github.com/Mosqlimate-project/Data-platform/issues/523)) ([7545d95](https://github.com/Mosqlimate-project/Data-platform/commit/7545d9528ee85f6ca7d2add77205096d783636aa))
+
+## [2.9.2](https://github.com/Mosqlimate-project/Data-platform/compare/2.9.1...2.9.2) (2026-07-01)
+
+
+### Bug Fixes
+
+* **registry:** fix missing repository deletion on model deletion endpoint ([#520](https://github.com/Mosqlimate-project/Data-platform/issues/520)) ([ab55222](https://github.com/Mosqlimate-project/Data-platform/commit/ab5522287ba184a89e2bd06e5cbb5f5d5548d27d))
+
+## [2.9.1](https://github.com/Mosqlimate-project/Data-platform/compare/2.9.0...2.9.1) (2026-06-30)
+
+
+### Bug Fixes
+
+* **dashboard:** fix dashboard models not updating when changing the IMDC year selection ([#519](https://github.com/Mosqlimate-project/Data-platform/issues/519)) ([05b7855](https://github.com/Mosqlimate-project/Data-platform/commit/05b7855015ab4bf83bceccba270ab00590546180))
+
+# [2.9.0](https://github.com/Mosqlimate-project/Data-platform/compare/2.8.0...2.9.0) (2026-06-30)
+
+
+### Bug Fixes
+
+* **worker:** fix wrongly overriten beat_schedule on tasks.py ([#517](https://github.com/Mosqlimate-project/Data-platform/issues/517)) ([2c751f3](https://github.com/Mosqlimate-project/Data-platform/commit/2c751f35aef784a8b5ad9481b84ae1bfd8f15deb))
+
+
+### Features
+
+* include backup task ([#514](https://github.com/Mosqlimate-project/Data-platform/issues/514)) ([372ae6c](https://github.com/Mosqlimate-project/Data-platform/commit/372ae6c7b3e69ff8a4472516a93f6958ef5a2185))
+
+# [2.8.0](https://github.com/Mosqlimate-project/Data-platform/compare/2.7.0...2.8.0) (2026-06-23)
+
+
+### Bug Fixes
+
+* **users:** fix get rate limit endpoint ([#510](https://github.com/Mosqlimate-project/Data-platform/issues/510)) ([027ee2f](https://github.com/Mosqlimate-project/Data-platform/commit/027ee2f1204ded4a113e07a83c2f57fe01872e15))
+
+
+### Features
+
+* **log:** include the APILog page back with some extra features ([#511](https://github.com/Mosqlimate-project/Data-platform/issues/511)) ([0ea39ea](https://github.com/Mosqlimate-project/Data-platform/commit/0ea39eab8edaeb584dc23142aa75bda8deac57c1))
+
+# [2.7.0](https://github.com/Mosqlimate-project/Data-platform/compare/2.6.0...2.7.0) (2026-06-23)
+
+
+### Features
+
+* **api:** include temporary users and throttle to the datastore endpoints ([#509](https://github.com/Mosqlimate-project/Data-platform/issues/509)) ([d5adb44](https://github.com/Mosqlimate-project/Data-platform/commit/d5adb4484117b01923d24e78bbed1c11352c8bc2))
+
+# [2.6.0](https://github.com/Mosqlimate-project/Data-platform/compare/2.5.2...2.6.0) (2026-06-19)
+
+
+### Bug Fixes
+
+* **predictions:** pagination was trimming some objects from the api when query is not orderded for some reason ([#507](https://github.com/Mosqlimate-project/Data-platform/issues/507)) ([171ea94](https://github.com/Mosqlimate-project/Data-platform/commit/171ea94af1856d5c6c05aeb5369a2d26e30226d5))
+
+
+### Features
+
+* **api:** include vegetation_metrics_index table on the api; also fix some errors related to model create by org ([#508](https://github.com/Mosqlimate-project/Data-platform/issues/508)) ([7354540](https://github.com/Mosqlimate-project/Data-platform/commit/735454082b533d5dd6f488469227735611d7df11))
+
+## [2.5.2](https://github.com/Mosqlimate-project/Data-platform/compare/2.5.1...2.5.2) (2026-06-18)
+
+
+### Bug Fixes
+
+* **registry:** fix model add error when logging with Organization ([#504](https://github.com/Mosqlimate-project/Data-platform/issues/504)) ([7ec7c36](https://github.com/Mosqlimate-project/Data-platform/commit/7ec7c36686c525533ba0da468a98409506251504))
+
+## [2.5.1](https://github.com/Mosqlimate-project/Data-platform/compare/2.5.0...2.5.1) (2026-06-15)
+
+
+### Bug Fixes
+
+* **backend:** replace default JSON parser due to math.NaN not being properly handle on json body ([#503](https://github.com/Mosqlimate-project/Data-platform/issues/503)) ([06f30af](https://github.com/Mosqlimate-project/Data-platform/commit/06f30af7076802e4998ee43d5f5fa123a49025fa))
+
+# [2.5.0](https://github.com/Mosqlimate-project/Data-platform/compare/2.4.5...2.5.0) (2026-05-29)
+
+
+### Features
+
+* **dashboard:** rework of the dashboard parameters lookup ([#501](https://github.com/Mosqlimate-project/Data-platform/issues/501)) ([e3cfc86](https://github.com/Mosqlimate-project/Data-platform/commit/e3cfc86703d2490ad6847a33288cf36cdd5b5152))
+
 ## [2.4.5](https://github.com/Mosqlimate-project/Data-platform/compare/2.4.4...2.4.5) (2026-05-19)
 
 

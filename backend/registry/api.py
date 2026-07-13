@@ -10,7 +10,6 @@ from django.contrib.auth import get_user_model
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction, models
-from django.core.files.base import ContentFile
 from django.utils import timezone
 from main.schema import (
     SuccessSchema,
@@ -74,7 +73,7 @@ def model_add(request, payload: s.ModelIncludeInit):
         else:
             org, _ = m.Organization.objects.get_or_create(name=owner_name)
             m.OrganizationMembership.objects.get_or_create(
-                user=request.user,
+                user=request.auth,
                 organization=org,
                 defaults={"role": m.OrganizationMembership.Roles.CONTRIBUTOR},
             )
@@ -120,29 +119,83 @@ def model_add(request, payload: s.ModelIncludeInit):
             },
         )
 
-        if payload.repo_avatar_url:
-            try:
-                with httpx.Client() as client:
-                    response = client.get(payload.repo_avatar_url, timeout=5)
-                    if response.status_code == 200:
-                        ext = "png"
-                        if "jpeg" in response.headers.get("content-type", ""):
-                            ext = "jpg"
-
-                        img = (
-                            f"{repository.provider}_{repository.repo_id}.{ext}"
-                        )
-
-                        model.avatar.save(
-                            img, ContentFile(response.content), save=True
-                        )
-            except (httpx.RequestError, httpx.TimeoutException):
-                pass
-
     return 201, {
         "success": True,
         "model_id": model.id,
         "action": "created" if created else "updated",
+    }
+
+
+@router.post(
+    "/model/{owner}/{repository}/refresh-avatar/",
+    auth=JWTAuth(),
+    response={200: dict, 400: dict, 403: dict, 404: dict},
+    include_in_schema=False,
+)
+def model_refresh_avatar(request, owner: str, repository: str):
+    query_filter = models.Q(repository__name__iexact=repository)
+
+    if owner.lower() == request.auth.username.lower():
+        query_filter &= models.Q(repository__owner=request.auth)
+    else:
+        query_filter &= models.Q(repository__organization__name__iexact=owner)
+
+    model_instance = m.RepositoryModel.objects.filter(query_filter).first()
+
+    if not model_instance:
+        return 404, {"message": "Model not found."}
+
+    repo = model_instance.repository
+
+    is_admin = m.RepositoryContributor.objects.filter(
+        user=request.auth,
+        repository=repo,
+        permission=m.RepositoryContributor.Permissions.ADMIN,
+    ).exists()
+
+    is_staff = getattr(request.auth, "is_staff", False)
+
+    if not is_admin and not is_staff:
+        return 403, {
+            "message": "You do not have permission to refresh this avatar."
+        }
+
+    target_avatar_url = None
+    provider_type = repo.provider.lower()
+
+    try:
+        if provider_type == "github":
+            url = f"https://api.github.com/users/{owner}"
+            with httpx.Client() as client:
+                res = client.get(url, timeout=5)
+                if res.status_code == 200:
+                    target_avatar_url = res.json().get("avatar_url")
+
+        elif provider_type == "gitlab":
+            url = f"https://gitlab.com/api/v4/namespaces/{owner}"
+            with httpx.Client() as client:
+                res = client.get(url, timeout=5)
+                if res.status_code == 200:
+                    target_avatar_url = res.json().get("avatar_url")
+    except (httpx.RequestError, httpx.TimeoutException) as e:
+        return 400, {"message": f"Failed to connect to provider API: {str(e)}"}
+
+    if not target_avatar_url:
+        return 400, {"message": "Could not retrieve avatar URL from provider."}
+
+    if repo.organization:
+        repo.organization.avatar = None
+        repo.organization.avatar_url = target_avatar_url
+        repo.organization.save(update_fields=["avatar", "avatar_url"])
+    elif repo.owner:
+        repo.owner.avatar = None
+        repo.owner.avatar_url = target_avatar_url
+        repo.owner.save(update_fields=["avatar", "avatar_url"])
+
+    return 200, {
+        "success": True,
+        "avatar_url": target_avatar_url,
+        "message": f"Successfully updated avatar for {owner}.",
     }
 
 
@@ -633,7 +686,10 @@ def repository_permissions(request, owner: str, repository: str):
         can_manage = True
 
     elif repo.organization:
-        membership = repo.organization.members.filter(user=user).first()
+        membership = m.OrganizationMembership.objects.filter(
+            organization=repo.organization, user=user
+        ).first()
+
         if membership and membership.role in ["OWNER", "ADMIN"]:
             can_manage = True
 
@@ -778,33 +834,56 @@ def model_update(
     repository: str,
     data: s.ModelUpdateIn,
 ):
-    perms_response = repository_permissions(request, owner, repository)
-
-    if not perms_response.get("can_manage"):
-        return 403, {
-            "message": "You do not have permission to manage this model"
-        }
-
     try:
         query = models.Q(repository__name=repository) & (
             models.Q(repository__organization__name=owner)
             | models.Q(repository__owner__username=owner)
         )
-        model = m.RepositoryModel.objects.get(query)
-
-        if data.active is not None:
-            repo = model.repository
-            repo.active = data.active
-            repo.save()
-
-        if data.description is not None:
-            model.description = data.description
-
-        model.save()
-
-        return 201, {"message": "ok"}
+        model = m.RepositoryModel.objects.select_related(
+            "repository__owner", "repository__organization"
+        ).get(query)
     except m.RepositoryModel.DoesNotExist:
         return 404, {"message": "Model not found"}
+
+    user = request.auth
+    repo = model.repository
+    can_manage = False
+
+    if user.is_superuser:
+        can_manage = True
+
+    if repo.owner and repo.owner == user:
+        can_manage = True
+
+    elif repo.organization:
+        membership = m.OrganizationMembership.objects.filter(
+            organization=repo.organization, user=user
+        ).first()
+        if membership and membership.role in ["OWNER", "ADMIN"]:
+            can_manage = True
+
+    if not can_manage:
+        is_admin = m.RepositoryContributor.objects.filter(
+            repository=repo, user=user, permission="ADMIN"
+        ).exists()
+        if is_admin:
+            can_manage = True
+
+    if not can_manage:
+        return 403, {
+            "message": "You do not have permission to manage this model"
+        }
+
+    if data.active is not None:
+        repo.active = data.active
+        repo.save()
+
+    if data.description is not None:
+        model.description = data.description
+
+    model.save()
+
+    return 201, {"message": "ok"}
 
 
 @router.delete(
@@ -818,27 +897,49 @@ def model_update(
     include_in_schema=False,
 )
 def model_delete(request, owner: str, repository: str):
-    perms_response = repository_permissions(request, owner, repository)
-
-    if isinstance(perms_response, tuple):
-        status_code, data = perms_response
-        return status_code, data
-
-    if not perms_response.get("can_manage"):
-        return 403, {
-            "message": "You do not have permission to delete this model"
-        }
-
     try:
         query = models.Q(repository__name=repository) & (
             models.Q(repository__organization__name=owner)
             | models.Q(repository__owner__username=owner)
         )
-        model = m.RepositoryModel.objects.get(query)
-        model.delete()
-        return 200, {"message": "Model deleted successfully"}
+        model = m.RepositoryModel.objects.select_related(
+            "repository__owner", "repository__organization"
+        ).get(query)
     except m.RepositoryModel.DoesNotExist:
         return 404, {"message": "Model not found"}
+
+    user = request.auth
+    repo = model.repository
+    can_manage = False
+
+    if user.is_superuser:
+        can_manage = True
+
+    if repo.owner and repo.owner == user:
+        can_manage = True
+
+    elif repo.organization:
+        membership = m.OrganizationMembership.objects.filter(
+            organization=repo.organization, user=user
+        ).first()
+        if membership and membership.role in ["OWNER", "ADMIN"]:
+            can_manage = True
+
+    if not can_manage:
+        is_admin = m.RepositoryContributor.objects.filter(
+            repository=repo, user=user, permission="ADMIN"
+        ).exists()
+        if is_admin:
+            can_manage = True
+
+    if not can_manage:
+        return 403, {
+            "message": "You do not have permission to delete this model"
+        }
+
+    repo.delete()
+    model.delete()
+    return 200, {"message": "Model deleted successfully"}
 
 
 @router.get(
@@ -913,7 +1014,7 @@ def list_predictions(
     else:
         qs = qs.filter(published=True, model__repository__active=True)
 
-    return qs.distinct()
+    return qs.distinct().order_by("id")
 
 
 @router.post(

@@ -1,30 +1,44 @@
 import logging
+from dateutil.relativedelta import relativedelta
 from typing import Optional
 
-from celery.schedules import crontab
 from django.core.cache import cache
+from django.db.models import Subquery, OuterRef, Max, Q
+from django.utils import timezone
 
 from mosqlimate.celeryapp import app
 
 from registry.models import QuantitativePrediction
 from vis.utils import calculate_score
 
-app.conf.beat_schedule = {
-    "update-prediction-scores-daily": {
-        "task": "vis.tasks.update_prediction_scores",
-        "schedule": crontab(hour=3, minute=0),
-    },
-}
-
 
 @app.task
 def update_prediction_scores(prediction_ids: Optional[list[int]] = None):
+    year_ago = timezone.now().date() - relativedelta(years=1)
+
+    latest = (
+        QuantitativePrediction.objects.filter(id=OuterRef("id"))
+        .annotate(max_date=Max("data__date"))
+        .values("max_date")
+    )
+
+    q = QuantitativePrediction.objects.annotate(end_date=Subquery(latest))
+
+    empty_scores = Q(
+        mae_score__isnull=True,
+        mse_score__isnull=True,
+        crps_score__isnull=True,
+        log_score__isnull=True,
+        interval_score__isnull=True,
+        wis_score__isnull=True,
+    )
+
+    filters = Q(end_date__gte=year_ago) | empty_scores
+
     if not prediction_ids:
-        predictions = QuantitativePrediction.objects.all()
+        predictions = q.filter(filters)
     else:
-        predictions = QuantitativePrediction.objects.filter(
-            id__in=prediction_ids
-        )
+        predictions = q.filter(Q(id__in=prediction_ids) & filters)
 
     for prediction in predictions:
         try:

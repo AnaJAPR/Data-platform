@@ -1,5 +1,6 @@
 from pathlib import Path
 from urllib.parse import urlparse
+import logging
 
 from django.contrib.messages import constants as messages
 from dotenv import load_dotenv
@@ -23,6 +24,10 @@ DEBUG = ENV.lower() == "dev"
 BACKEND_CONTAINER_DATA_PATH = Path(
     env("BACKEND_CONTAINER_DATA_PATH", default=str(BASE_DIR / "staticfiles"))
 )
+
+BACKUP_DIR = Path("/opt/backups")
+
+SENTRY_DSN = env("SENTRY_DSN", default="")
 
 ALLOWED_HOSTS = [
     "*",  #
@@ -144,7 +149,7 @@ DATABASES = {
     "infodengue": {
         "ENGINE": "django.db.backends.postgresql",
         "OPTIONS": {
-            "options": '-c search_path="Municipio","Dengue_global",weather'
+            "options": '-c search_path="Municipio","Dengue_global",weather,vegetation_indices'
         },
         "NAME": INFODENGUE_URI.path.replace("/", ""),
         "USER": INFODENGUE_URI.username,
@@ -157,6 +162,8 @@ DATABASES = {
 DATABASE_ROUTERS = (
     "datastore.routers.MunicipioRouter",
     "datastore.routers.WeatherRouter",
+    "datastore.routers.VegetationIndicesRouter",
+    "datastore.routers.DengueGlobalRouter",
 )
 
 BACKEND_PORT = env("BACKEND_PORT")
@@ -345,3 +352,23 @@ LOGGING = {
         },
     },
 }
+
+if SENTRY_DSN:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+    from sentry_sdk.integrations.celery import CeleryIntegration
+    from sentry_sdk.integrations.logging import LoggingIntegration
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[
+            DjangoIntegration(),
+            CeleryIntegration(),
+            LoggingIntegration(
+                level=logging.INFO,
+                event_level=logging.WARNING,
+            ),
+        ],
+        environment=ENV,
+        send_default_pii=False,
+    )
