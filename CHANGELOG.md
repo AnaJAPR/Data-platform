@@ -1,6 +1,41 @@
 Release Notes
 ---
 
+## [2.11.4](https://github.com/Mosqlimate-project/Data-platform/compare/2.11.3...2.11.4) (2026-07-22)
+
+
+### Bug Fixes
+
+* **mosquito:** fix 500 error on /mosquito/ endpoint ([#537](https://github.com/Mosqlimate-project/Data-platform/issues/537)) ([0015bbf](https://github.com/Mosqlimate-project/Data-platform/commit/0015bbfd0739ef37139c3048fb22b5173ef15a0b))
+
+## [2.11.3](https://github.com/Mosqlimate-project/Data-platform/compare/2.11.2...2.11.3) (2026-07-22)
+
+
+### Bug Fixes
+
+* **episcanner:** adjust the date range for the data shown in the episcanner ([#536](https://github.com/Mosqlimate-project/Data-platform/issues/536)) ([e6db9e4](https://github.com/Mosqlimate-project/Data-platform/commit/e6db9e4a6456840bb798219aa1b10cbd1c7cf472))
+
+## [2.11.2](https://github.com/Mosqlimate-project/Data-platform/compare/2.11.1...2.11.2) (2026-07-20)
+
+
+### Bug Fixes
+
+* **dashboard:** disable Notified or Probable cases buttons when theres no predictions for it ([#534](https://github.com/Mosqlimate-project/Data-platform/issues/534)) ([e77fe2d](https://github.com/Mosqlimate-project/Data-platform/commit/e77fe2dcb68b5260e6bb6ab5b11eac4f92b5ff46))
+
+## [2.11.1](https://github.com/Mosqlimate-project/Data-platform/compare/2.11.0...2.11.1) (2026-07-16)
+
+
+### Bug Fixes
+
+* **episcanner:** minor fix on episcanner output ([#533](https://github.com/Mosqlimate-project/Data-platform/issues/533)) ([a7e015b](https://github.com/Mosqlimate-project/Data-platform/commit/a7e015b958930ddbacf9d25365c2f35e8ea4b5dc))
+
+# [2.11.0](https://github.com/Mosqlimate-project/Data-platform/compare/2.10.3...2.11.0) (2026-07-16)
+
+
+### Features
+
+* **datastore:** include episcanner endpoints using the new table ([#532](https://github.com/Mosqlimate-project/Data-platform/issues/532)) ([caa39a2](https://github.com/Mosqlimate-project/Data-platform/commit/caa39a2d7861f129c28973ffc23884cfd50fd2b3))
+
 ## [2.10.3](https://github.com/Mosqlimate-project/Data-platform/compare/2.10.2...2.10.3) (2026-07-14)
 
 

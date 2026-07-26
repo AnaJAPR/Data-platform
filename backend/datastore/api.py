@@ -1,9 +1,7 @@
 import datetime
 import requests
-from typing import List, Literal, Optional
+from typing import Any, List, Literal, Optional
 
-import duckdb
-import pandas as pd
 from epiweeks import Week
 
 from ninja import Router, Query
@@ -13,7 +11,6 @@ from django.views.decorators.csrf import csrf_exempt
 from django.db.utils import OperationalError
 from django.db.models import F, Avg, Sum, Count, Q
 from django.db.models.functions import Round
-from django.conf import settings
 from django.core.cache import cache
 
 
@@ -30,6 +27,8 @@ from .models import (
     HistoricoAlertaChik,
     CopernicusBrasil,
     ContaOvos,
+    Adm2,
+    EpiscannerSirParams,
 )
 from datastore import schema, filters, models
 
@@ -95,8 +94,8 @@ def get_vegetation_metrics(
         return 500, {"message": "Server error. Please contact the moderation"}
 
     if uf:
-        uf: str = uf.upper()
-        if uf not in list(UFs):
+        uf_upper = uf.upper()  # type: ignore[no-redef]
+        if uf_upper not in list(UFs):
             return 404, {"message": "Unknown UF. Format: SP"}
 
         uf_name = UFs[uf]
@@ -112,21 +111,21 @@ def get_vegetation_metrics(
 
 
 def get_infodengue_queryset(
-    disease: Literal["dengue", "chikungunya", "zika"], uf: str = None
+    disease: Literal["dengue", "chikungunya", "zika"], uf: Optional[str] = None
 ):
-    disease = disease.lower()
+    disease = disease.lower()  # type: ignore[assignment]
 
     if disease in ["chik", "chikungunya"]:
-        qs = HistoricoAlertaChik.objects.using("infodengue").all()
+        qs: Any = HistoricoAlertaChik.objects.using("infodengue").all()
     elif disease in ["deng", "dengue"]:
-        qs = HistoricoAlerta.objects.using("infodengue").all()
+        qs = HistoricoAlerta.objects.using("infodengue").all()  # type: ignore[assignment]
     elif disease == "zika":
-        qs = HistoricoAlertaZika.objects.using("infodengue").all()
+        qs = HistoricoAlertaZika.objects.using("infodengue").all()  # type: ignore[assignment]
     else:
         return None
 
     if uf:
-        uf = uf.upper()
+        uf = uf.upper()  # type: ignore[no-redef]
         if uf in UFs:
             uf_name = UFs[uf]
             geocodes = (
@@ -192,10 +191,10 @@ def get_infodengue(
     **kwargs,
 ):
     APILog.from_request(request)
-    disease = disease.lower()
+    disease = disease.lower()  # type: ignore[assignment]
 
     try:
-        data = get_infodengue_queryset(disease, uf)
+        data = get_infodengue_queryset(disease, uf)  # type: ignore[arg-type]
     except ValueError:
         return 404, {"message": f"Unknown UF '{uf}'"}
     except OperationalError:
@@ -265,7 +264,7 @@ def get_copernicus_brasil(
         return 500, {"message": "Server error. Please contact the moderation"}
 
     if uf:
-        uf = uf.upper()
+        uf = uf.upper()  # type: ignore[assignment,no-redef]
         if uf not in list(UFs):
             return 404, {"message": "Unkown UF. Format: SP"}
         uf_name = UFs[uf]
@@ -410,18 +409,24 @@ def get_contaovos(
     response = requests.get(url, params=params, timeout=20)
 
     if response.status_code == 200:
-        return 200, [schema.ContaOvosSchema(**i) for i in response.json()]
+        data = response.json()
+        if not isinstance(data, list):
+            return 402, {"message": data}
+        return 200, [
+            schema.ContaOvosSchema(**i) for i in data if isinstance(i, dict)
+        ]
 
-    if response.status_code == 500:
-        return 500, {
-            "message": "Internal error. Please contact the moderation"
-        }
+    try:
+        message = response.json()
+    except Exception:
+        message = response.text
 
-    return 404, {"message": response.json()}
+    return response.status_code, {"message": message}
 
 
 @router.get(
     "/episcanner/",
+    response=List[schema.EpiScannerSchema],
     auth=uidkey_auth,
 )
 @csrf_exempt
@@ -467,53 +472,69 @@ def get_episcanner(
     if cached_data is not None:
         return 200, cached_data
 
-    db = duckdb.connect(
-        str(
-            settings.BACKEND_CONTAINER_DATA_PATH
-            / "episcanner"
-            / "episcanner.duckdb"
-        ),
-        read_only=True,
-    )
+    cid10 = DISEASE_CID10[disease]
 
-    describe: pd.DataFrame = db.execute("DESCRIBE").fetchdf()
-
-    if describe.empty:
-        print("Duckdb data not found while trying to retrieve EpiScanner data")
-        return 500, {
-            "message": "Internal error. Please contact the moderation",
-        }
-
-    if disease == "chikungunya":
-        disease = "chik"
-
-    sql = f"SELECT * FROM '{uf}' WHERE disease = '{disease}' AND year = {year}"
-
-    try:
-        df = db.execute(sql).fetchdf()
-    except duckdb.CatalogException as e:
-        print(f"Duckdb error executing sql {sql}\n{e}")
-        return 500, {
-            "message": "Internal error. Please contact the moderation",
-        }
-    except duckdb.IOException as e:
-        print(f"Duckdb IO error: {e}")
-        return 500, {
-            "message": "Internal error. Please contact the moderation",
-        }
-    finally:
-        db.close()
-
-    if df.empty:
-        return 200, []
-
-    objs = [
-        schema.EpiScannerSchema(**d)
-        for d in df.to_dict(orient="records")  # pyright: ignore
+    geocodes_in_state = [
+        int(g)
+        for g in Adm2.objects.filter(adm1__name=UFs[uf]).values_list(
+            "geocode", flat=True
+        )
     ]
 
-    cache.set(cache_key, objs, timeout=86400)  # 24 hours
+    rows = (
+        EpiscannerSirParams.objects.using("infodengue")
+        .filter(
+            cid10=cid10,
+            year=year,
+            geocode__in=geocodes_in_state,
+        )
+        .values(
+            "cid10",
+            "geocode",
+            "year",
+            "ep_ini",
+            "ep_pw",
+            "ep_end",
+            "ep_dur",
+            "peak_week",
+            "beta",
+            "gamma",
+            "r0",
+            "total_cases",
+            "alpha",
+            "sum_res",
+        )
+    )
 
+    adm2_names = {
+        a.geocode: a.name
+        for a in Adm2.objects.filter(
+            geocode__in=[str(g) for g in geocodes_in_state]
+        )
+    }
+
+    objs = [
+        schema.EpiScannerSchema(
+            disease=disease,
+            CID10=r["cid10"],
+            year=r["year"],
+            geocode=r["geocode"],
+            muni_name=adm2_names.get(str(r["geocode"]), ""),
+            peak_week=r["peak_week"],
+            beta=r["beta"],
+            gamma=r["gamma"],
+            R0=r["r0"],
+            total_cases=r["total_cases"],
+            alpha=r["alpha"],
+            sum_res=r["sum_res"],
+            ep_ini=r["ep_ini"],
+            ep_end=r["ep_end"],
+            ep_dur=r["ep_dur"],
+        )
+        for r in rows
+    ]
+
+    cache.set(cache_key, objs, timeout=86400)
     return 200, objs
 
 
@@ -529,7 +550,7 @@ def charts_infodengue_rt(
     start: datetime.date,
     end: datetime.date,
 ):
-    qs = get_infodengue_queryset(disease)
+    qs = get_infodengue_queryset(disease)  # type: ignore[arg-type]
 
     if qs is None:
         return 404, {"message": "Unknown disease"}
@@ -559,7 +580,7 @@ def charts_infodengue_total_cases(
     start: datetime.date,
     end: datetime.date,
 ):
-    qs = get_infodengue_queryset(disease)
+    qs = get_infodengue_queryset(disease)  # type: ignore[arg-type]
 
     if qs is None:
         return 404, {"message": "Unknown disease"}
@@ -661,15 +682,15 @@ def charts_contaovos(
         qs = qs.filter(adm2=geocode)
 
     qs = (
-        qs.values("year", "week")
+        qs.values("year", "week")  # type: ignore[assignment]
         .annotate(total_eggs=Sum("eggs"))
         .order_by("year", "week")
     )
 
     return [
         {
-            "epiweek": f"{row['year']}-{str(row['week']).zfill(2)}",
-            "total_eggs": row["total_eggs"],
+            "epiweek": f"{row['year']}-{str(row['week']).zfill(2)}",  # type: ignore[index]
+            "total_eggs": row["total_eggs"],  # type: ignore[index]
         }
         for row in qs
     ]
@@ -849,3 +870,623 @@ def city_search(
     qs = filters.filter(qs)
 
     return qs
+
+
+DISEASE_ALERT_MODEL = {
+    "dengue": HistoricoAlerta,
+    "chikungunya": HistoricoAlertaChik,
+    "zika": HistoricoAlertaZika,
+}
+
+DISEASE_CID10 = {
+    "dengue": "A90",
+    "chikungunya": "A92.0",
+    "zika": "A92.5",
+}
+
+
+def _get_alert_geocodes_for_uf(uf: str):
+    uf = uf.upper()
+    uf_name = UFs.get(uf)
+    if not uf_name:
+        raise HttpError(404, f"Unknown UF: {uf}")
+
+    geocodes = Adm2.objects.filter(adm1__name=uf_name).values_list(
+        "geocode", flat=True
+    )
+    return [int(g) for g in geocodes]
+
+
+def _get_alert_queryset(disease: str, uf: Optional[str] = None):
+    disease = disease.lower()
+    model = DISEASE_ALERT_MODEL.get(disease)
+    if not model:
+        raise HttpError(400, f"Unknown disease: {disease}")
+
+    qs = model.objects.using("infodengue").all()
+
+    if uf:
+        geocodes = _get_alert_geocodes_for_uf(uf)
+        qs = qs.filter(municipio_geocodigo__in=geocodes)
+
+    return qs
+
+
+@router.get(
+    "/episcanner/states/",
+    response=List[schema.EpiScannerStateSchema],
+    auth=uidkey_auth,
+    include_in_schema=False,
+)
+def episcanner_states(request):
+    return [{"code": k, "name": v} for k, v in UFs.items()]
+
+
+@router.get(
+    "/episcanner/cities/",
+    response=List[schema.EpiScannerCitySchema],
+    auth=uidkey_auth,
+    include_in_schema=False,
+)
+def episcanner_cities(
+    request,
+    disease: Literal["dengue", "zika", "chikungunya"],
+    uf: Literal[
+        "AC",
+        "AL",
+        "AP",
+        "AM",
+        "BA",
+        "CE",
+        "ES",
+        "GO",
+        "MA",
+        "MT",
+        "MS",
+        "MG",
+        "PA",
+        "PB",
+        "PR",
+        "PE",
+        "PI",
+        "RJ",
+        "RN",
+        "RS",
+        "RO",
+        "RR",
+        "SC",
+        "SP",
+        "SE",
+        "TO",
+        "DF",
+    ],
+    year: int = datetime.datetime.now().year,
+):
+    uf_name = UFs[uf]
+    adm2_geocodes = Adm2.objects.filter(adm1__name=uf_name).values_list(
+        "geocode", flat=True
+    )
+    geocodes_int = [int(g) for g in adm2_geocodes]
+
+    start_date = Week(year - 1, 45).startdate()
+    end_date = Week(year, 45).startdate()
+
+    qs = _get_alert_queryset(disease).filter(
+        municipio_geocodigo__in=geocodes_int,
+        data_iniSE__gte=start_date,
+        data_iniSE__lt=end_date,
+    )
+
+    municipality_geocodes = (
+        qs.values_list("municipio_geocodigo", flat=True)
+        .distinct()
+        .order_by("municipio_geocodigo")
+    )
+    geocode_set = {str(g) for g in municipality_geocodes}
+
+    adm2_names = {
+        a.geocode: a.name for a in Adm2.objects.filter(geocode__in=geocode_set)
+    }
+
+    return [
+        {"geocode": str(g), "name": adm2_names.get(str(g), str(g))}
+        for g in sorted(geocodes_int)
+        if str(g) in geocode_set
+    ]
+
+
+@router.get(
+    "/episcanner/parameters/",
+    response=List[schema.EpiScannerParameterSchema],
+    auth=uidkey_auth,
+    include_in_schema=False,
+)
+def episcanner_parameters(
+    request,
+    disease: Literal["dengue", "zika", "chikungunya"],
+    uf: Literal[
+        "AC",
+        "AL",
+        "AP",
+        "AM",
+        "BA",
+        "CE",
+        "ES",
+        "GO",
+        "MA",
+        "MT",
+        "MS",
+        "MG",
+        "PA",
+        "PB",
+        "PR",
+        "PE",
+        "PI",
+        "RJ",
+        "RN",
+        "RS",
+        "RO",
+        "RR",
+        "SC",
+        "SP",
+        "SE",
+        "TO",
+        "DF",
+    ],
+):
+    cid10 = DISEASE_CID10[disease]
+
+    geocodes_in_state = [
+        int(g)
+        for g in Adm2.objects.filter(adm1__name=UFs[uf]).values_list(
+            "geocode", flat=True
+        )
+    ]
+
+    qs = (
+        EpiscannerSirParams.objects.using("infodengue")
+        .filter(cid10=cid10, geocode__in=geocodes_in_state)
+        .values(
+            "cid10",
+            "geocode",
+            "year",
+            "ep_ini",
+            "ep_pw",
+            "ep_end",
+            "ep_dur",
+            "peak_week",
+            "beta",
+            "gamma",
+            "r0",
+            "total_cases",
+            "alpha",
+            "sum_res",
+        )
+    )
+
+    rows = list(qs)
+
+    years = sorted({r["year"] for r in rows})
+    if years:
+        overall_start = Week(years[0] - 1, 45).startdate()
+        overall_end = Week(years[-1], 45).startdate()
+    else:
+        overall_start = overall_end = None
+
+    reported: dict[tuple, int] = {}
+    if overall_start and overall_end:
+        alert_qs = get_infodengue_queryset(disease)  # type: ignore[arg-type]
+        if alert_qs is not None:
+            week_ends = {y: Week(y, 45).startdate() for y in years}
+            sorted_years = sorted(years)
+            alert_rows = alert_qs.filter(
+                municipio_geocodigo__in=geocodes_in_state,
+                data_iniSE__gte=overall_start,
+                data_iniSE__lt=overall_end,
+            ).values("municipio_geocodigo", "data_iniSE", "casos")
+            for ar in alert_rows:
+                d = ar["data_iniSE"]
+                ep_year = None
+                for y in sorted_years:
+                    if d < week_ends[y]:
+                        ep_year = y
+                        break
+                if ep_year is None:
+                    ep_year = sorted_years[-1] + 1
+                key = (ar["municipio_geocodigo"], ep_year)
+                reported[key] = reported.get(key, 0) + (ar["casos"] or 0)
+
+    return [
+        schema.EpiScannerParameterSchema(
+            cid10=r["cid10"],
+            geocode=r["geocode"],
+            year=r["year"],
+            ep_ini=r["ep_ini"],
+            ep_pw=r["ep_pw"],
+            ep_end=r["ep_end"],
+            ep_dur=r["ep_dur"],
+            peak_week=r["peak_week"],
+            beta=r["beta"],
+            gamma=r["gamma"],
+            r0=r["r0"],
+            total_cases=r["total_cases"],
+            alpha=r["alpha"],
+            sum_res=r["sum_res"],
+            reported_cases=reported.get((r["geocode"], r["year"]), 0),
+        )
+        for r in rows
+    ]
+
+
+@router.get(
+    "/episcanner/timeseries/",
+    response=List[schema.EpiScannerTimeseriesRow],
+    auth=uidkey_auth,
+    include_in_schema=False,
+)
+def episcanner_timeseries(
+    request,
+    disease: Literal["dengue", "zika", "chikungunya"],
+    geocode: int,
+    year: int = datetime.datetime.now().year,
+):
+    qs = _get_alert_queryset(disease).filter(municipio_geocodigo=geocode)
+
+    if year > 0:
+        start_date = Week(year - 1, 45).startdate()
+        end_date = Week(year, 45).startdate()
+        qs = qs.filter(
+            data_iniSE__gte=start_date,
+            data_iniSE__lt=end_date,
+        )
+
+    rows = qs.values("data_iniSE", "casos", "casos_est").order_by("data_iniSE")
+
+    cumulative = 0
+    result = []
+    for r in rows:
+        casos = r["casos"]
+        if casos:
+            cumulative += casos
+        result.append(
+            schema.EpiScannerTimeseriesRow(
+                date=r["data_iniSE"],
+                casos=casos,
+                casos_est=r["casos_est"],
+                casos_cum=cumulative,
+            )
+        )
+
+    return 200, result
+
+
+@router.get(
+    "/episcanner/top-cities/",
+    response=List[schema.EpiScannerTopCitySchema],
+    auth=uidkey_auth,
+    include_in_schema=False,
+)
+def episcanner_top_cities(
+    request,
+    disease: Literal["dengue", "zika", "chikungunya"],
+    uf: Literal[
+        "AC",
+        "AL",
+        "AP",
+        "AM",
+        "BA",
+        "CE",
+        "ES",
+        "GO",
+        "MA",
+        "MT",
+        "MS",
+        "MG",
+        "PA",
+        "PB",
+        "PR",
+        "PE",
+        "PI",
+        "RJ",
+        "RN",
+        "RS",
+        "RO",
+        "RR",
+        "SC",
+        "SP",
+        "SE",
+        "TO",
+        "DF",
+    ],
+    limit: int = 20,
+    year: int = datetime.datetime.now().year,
+):
+    start_date = Week(year - 1, 45).startdate()
+    end_date = Week(year, 45).startdate()
+    qs = _get_alert_queryset(disease, uf)
+
+    qs = qs.filter(
+        data_iniSE__gte=start_date,
+        data_iniSE__lt=end_date,
+    )
+
+    aggregated = (
+        qs.values("municipio_geocodigo")
+        .annotate(total_transmissao=Sum("transmissao"))
+        .filter(total_transmissao__gt=0)
+        .order_by("-total_transmissao")[:limit]
+    )
+
+    geocodes = [str(r["municipio_geocodigo"]) for r in aggregated]
+    adm2_names = {
+        a.geocode: a.name for a in Adm2.objects.filter(geocode__in=geocodes)
+    }
+
+    return [
+        schema.EpiScannerTopCitySchema(
+            name_muni=adm2_names.get(
+                str(r["municipio_geocodigo"]), str(r["municipio_geocodigo"])
+            ),
+            transmissao=r["total_transmissao"],
+            geocode=str(r["municipio_geocodigo"]),
+        )
+        for r in aggregated
+    ]
+
+
+@router.get(
+    "/episcanner/maps/weeks/",
+    response=List[schema.EpiScannerMapsWeeksItem],
+    auth=uidkey_auth,
+    include_in_schema=False,
+)
+def episcanner_maps_weeks(
+    request,
+    disease: Literal["dengue", "zika", "chikungunya"],
+    uf: Literal[
+        "AC",
+        "AL",
+        "AP",
+        "AM",
+        "BA",
+        "CE",
+        "ES",
+        "GO",
+        "MA",
+        "MT",
+        "MS",
+        "MG",
+        "PA",
+        "PB",
+        "PR",
+        "PE",
+        "PI",
+        "RJ",
+        "RN",
+        "RS",
+        "RO",
+        "RR",
+        "SC",
+        "SP",
+        "SE",
+        "TO",
+        "DF",
+    ],
+    year: int = datetime.datetime.now().year,
+):
+    APILog.from_request(request)
+
+    start_date = Week(year - 1, 45).startdate()
+    end_date = Week(year, 45).startdate()
+    qs = _get_alert_queryset(disease, uf)
+
+    qs = qs.filter(
+        data_iniSE__gte=start_date,
+        data_iniSE__lt=end_date,
+    )
+
+    aggregated = qs.values("municipio_geocodigo").annotate(
+        sum_transmissao=Sum("transmissao")
+    )
+
+    return [
+        schema.EpiScannerMapsWeeksItem(
+            geocode=str(r["municipio_geocodigo"]),
+            transmissao=r["sum_transmissao"],
+        )
+        for r in aggregated
+    ]
+
+
+@router.get(
+    "/episcanner/maps/r0/",
+    response=schema.EpiScannerR0MapResponse,
+    auth=uidkey_auth,
+    include_in_schema=False,
+)
+def episcanner_maps_r0(
+    request,
+    disease: Literal["dengue", "zika", "chikungunya"],
+    uf: Literal[
+        "AC",
+        "AL",
+        "AP",
+        "AM",
+        "BA",
+        "CE",
+        "ES",
+        "GO",
+        "MA",
+        "MT",
+        "MS",
+        "MG",
+        "PA",
+        "PB",
+        "PR",
+        "PE",
+        "PI",
+        "RJ",
+        "RN",
+        "RS",
+        "RO",
+        "RR",
+        "SC",
+        "SP",
+        "SE",
+        "TO",
+        "DF",
+    ],
+    year: int = datetime.datetime.now().year,
+):
+    cid10 = DISEASE_CID10[disease]
+
+    geocodes_in_state = [
+        int(g)
+        for g in Adm2.objects.filter(adm1__name=UFs[uf]).values_list(
+            "geocode", flat=True
+        )
+    ]
+
+    params = (
+        EpiscannerSirParams.objects.using("infodengue")
+        .filter(
+            cid10=cid10,
+            year=year,
+            geocode__in=geocodes_in_state,
+        )
+        .annotate(r0_val=F("r0"))
+        .values("geocode", "r0_val")
+    )
+
+    top_r0 = sorted(params, key=lambda x: x["r0_val"], reverse=True)[:10]
+
+    top_geocodes = [str(r["geocode"]) for r in top_r0]
+    adm2_names = {
+        a.geocode: a.name
+        for a in Adm2.objects.filter(geocode__in=top_geocodes)
+    }
+
+    return schema.EpiScannerR0MapResponse(
+        r0Data=[
+            schema.EpiScannerR0MapItem(
+                geocode=str(r["geocode"]),
+                R0=r["r0_val"],
+            )
+            for r in params
+        ],
+        topR0=[
+            schema.EpiScannerR0MapItem(
+                geocode=str(r["geocode"]),
+                name=adm2_names.get(str(r["geocode"]), str(r["geocode"])),
+                R0=r["r0_val"],
+            )
+            for r in top_r0
+        ],
+    )
+
+
+@router.get(
+    "/episcanner/maps/model-eval/",
+    response=schema.EpiScannerModelEvalResponse,
+    auth=uidkey_auth,
+    include_in_schema=False,
+)
+def episcanner_maps_model_eval(
+    request,
+    disease: Literal["dengue", "zika", "chikungunya"],
+    uf: Literal[
+        "AC",
+        "AL",
+        "AP",
+        "AM",
+        "BA",
+        "CE",
+        "ES",
+        "GO",
+        "MA",
+        "MT",
+        "MS",
+        "MG",
+        "PA",
+        "PB",
+        "PR",
+        "PE",
+        "PI",
+        "RJ",
+        "RN",
+        "RS",
+        "RO",
+        "RR",
+        "SC",
+        "SP",
+        "SE",
+        "TO",
+        "DF",
+    ],
+    year: int = datetime.datetime.now().year,
+):
+    cid10 = DISEASE_CID10[disease]
+
+    sir_params = {
+        str(r["geocode"]): r["total_cases"]
+        for r in EpiscannerSirParams.objects.using("infodengue")
+        .filter(cid10=cid10, year=year)
+        .values("geocode", "total_cases")
+    }
+
+    start_date = Week(year - 1, 45).startdate()
+    end_date = Week(year, 45).startdate()
+    qs = _get_alert_queryset(disease, uf).filter(
+        data_iniSE__gte=start_date,
+        data_iniSE__lt=end_date,
+    )
+
+    observed = qs.values("municipio_geocodigo").annotate(
+        obs_cases=Sum("casos")
+    )
+
+    rate_map = []
+    ratios = []
+    for r in observed:
+        geocode_str = str(r["municipio_geocodigo"])
+        total = sir_params.get(geocode_str)
+        obs = r["obs_cases"] or 0
+        if total and total > 0:
+            rate = obs / total
+        else:
+            rate = None
+        rate_map.append(
+            schema.EpiScannerModelEvalItem(
+                geocode=geocode_str,
+                observed_cases=obs,
+                total_cases=total or 0,
+                rate=round(rate, 4) if rate is not None else None,
+            )
+        )
+        if rate is not None:
+            ratios.append(rate)
+
+    if not ratios:
+        return schema.EpiScannerModelEvalResponse(rateMap=rate_map, table=[])
+
+    bins = [0, 0.5, 0.75, 1.0, 1.25, float("inf")]
+    bin_labels = ["<50%", "50-75%", "75-100%", "100-125%", ">125%"]
+    bin_counts = [0] * (len(bins) - 1)
+
+    for r in ratios:
+        for i in range(len(bins) - 1):
+            if bins[i] <= r < bins[i + 1]:
+                bin_counts[i] += 1
+                break
+
+    total = len(ratios)
+    table = [
+        schema.EpiScannerModelEvalBin(
+            range=label,
+            count=count,
+            percentage=round(count / total * 100, 1),
+        )
+        for label, count in zip(bin_labels, bin_counts)
+    ]
+
+    return schema.EpiScannerModelEvalResponse(rateMap=rate_map, table=table)
