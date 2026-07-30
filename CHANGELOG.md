@@ -1,6 +1,20 @@
 Release Notes
 ---
 
+## [2.12.1](https://github.com/Mosqlimate-project/Data-platform/compare/2.12.0...2.12.1) (2026-07-28)
+
+
+### Bug Fixes
+
+* **sdk:** fix throttle on sdk ([#539](https://github.com/Mosqlimate-project/Data-platform/issues/539)) ([e61dbe0](https://github.com/Mosqlimate-project/Data-platform/commit/e61dbe092b4959f43ea05baf2195d9fb05df8685))
+
+# [2.12.0](https://github.com/Mosqlimate-project/Data-platform/compare/2.11.4...2.12.0) (2026-07-27)
+
+
+### Features
+
+* **sdk:** add rotating SDK key auth and chart endpoints for vis module ([#538](https://github.com/Mosqlimate-project/Data-platform/issues/538)) ([012d315](https://github.com/Mosqlimate-project/Data-platform/commit/012d315a3c47c54cc178247226a67130334ee85a))
+
 ## [2.11.4](https://github.com/Mosqlimate-project/Data-platform/compare/2.11.3...2.11.4) (2026-07-22)
 
 
