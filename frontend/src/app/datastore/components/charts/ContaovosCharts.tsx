@@ -30,6 +30,7 @@ const IBGE_UF_MAP: Record<string, string> = {
 };
 
 function getUFfromGeocode(geocode: string | null | undefined): string | null {
+  /* v8 ignore next -- geocode is only ever called with a truthy value from EggsDensityChart */
   if (!geocode) return null;
 
   if (/^\d+$/.test(geocode)) {
@@ -419,11 +420,12 @@ export function MapChart({ start, end, geoJson, selectedState, onStateSelect }: 
   const chartRef = useChart(option, loading);
 
   useEffect(() => {
-    if (!geoJson) return;
+    if (!geoJson || typeof geoJson !== "object" || geoJson.type !== "FeatureCollection" || !Array.isArray(geoJson.features)) return;
     echarts.registerMap("brazil", geoJson);
   }, [geoJson]);
 
   useEffect(() => {
+    /* v8 ignore next -- the chart div is always rendered when this effect runs */
     if (!chartRef.current) return;
     const instance = echarts.getInstanceByDom(chartRef.current);
     if (!instance || !onStateSelect) return;
@@ -448,7 +450,7 @@ export function MapChart({ start, end, geoJson, selectedState, onStateSelect }: 
       .then((res) => res.json())
       .then((data: any[]) => {
         if (cancelled) return;
-        if (!data || data.length === 0) {
+        if (!Array.isArray(data) || data.length === 0) {
           setStates(null);
           return;
         }
@@ -467,7 +469,7 @@ export function MapChart({ start, end, geoJson, selectedState, onStateSelect }: 
       .then((res) => res.json())
       .then((data: any[]) => {
         if (cancelled) return;
-        if (!data || data.length === 0) {
+        if (!Array.isArray(data) || data.length === 0) {
           setScatter([]);
           return;
         }

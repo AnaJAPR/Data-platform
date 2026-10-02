@@ -1,6 +1,42 @@
 Release Notes
 ---
 
+## [2.15.2](https://github.com/Mosqlimate-project/Data-platform/compare/2.15.1...2.15.2) (2026-09-16)
+
+
+### Bug Fixes
+
+* **chatbot:** fix positional arg on func call ([#559](https://github.com/Mosqlimate-project/Data-platform/issues/559)) ([776918a](https://github.com/Mosqlimate-project/Data-platform/commit/776918a1f546c759c0a1b5ab35ff1c51e7dcc0c6))
+
+## [2.15.1](https://github.com/Mosqlimate-project/Data-platform/compare/2.15.0...2.15.1) (2026-09-16)
+
+
+### Bug Fixes
+
+* **registry:** bypass create prediction if user is admin ([#558](https://github.com/Mosqlimate-project/Data-platform/issues/558)) ([53c1cd6](https://github.com/Mosqlimate-project/Data-platform/commit/53c1cd63b5cae08f6fb26c154298b11a67678d61))
+
+# [2.15.0](https://github.com/Mosqlimate-project/Data-platform/compare/2.14.0...2.15.0) (2026-09-15)
+
+
+### Features
+
+* include a RO-Crate endpoint for the API ([#555](https://github.com/Mosqlimate-project/Data-platform/issues/555)) ([4b27afb](https://github.com/Mosqlimate-project/Data-platform/commit/4b27afbaf7356340fe11990231476a67fc8b5343))
+* **tests:** include extensive testing on registry app ([#535](https://github.com/Mosqlimate-project/Data-platform/issues/535)) ([5b11c90](https://github.com/Mosqlimate-project/Data-platform/commit/5b11c90b1510ee429d9b7a075300b328b315c475))
+
+# [2.14.0](https://github.com/Mosqlimate-project/Data-platform/compare/2.13.0...2.14.0) (2026-09-08)
+
+
+### Bug Fixes
+
+* coolify doesn't allow volumes to be env variables ([#547](https://github.com/Mosqlimate-project/Data-platform/issues/547)) ([caedde8](https://github.com/Mosqlimate-project/Data-platform/commit/caedde83bf43b6d3c03985dea450079d4fb887e2))
+* include swagger.json to fix docs build on coolify ([#549](https://github.com/Mosqlimate-project/Data-platform/issues/549)) ([bd870f0](https://github.com/Mosqlimate-project/Data-platform/commit/bd870f09c1a0752c6d859fc208e11f219072d951))
+* remove ollama container & fetch swagger.json from prod instead ([#548](https://github.com/Mosqlimate-project/Data-platform/issues/548)) ([15bae2b](https://github.com/Mosqlimate-project/Data-platform/commit/15bae2b7463ddf0fd5fa7076101f99e2781ff85c))
+
+
+### Features
+
+* coolify the docker cluster ([#545](https://github.com/Mosqlimate-project/Data-platform/issues/545)) ([a506799](https://github.com/Mosqlimate-project/Data-platform/commit/a506799f5d533512a4db277b47c8399e902d9095))
+
 # [2.13.0](https://github.com/Mosqlimate-project/Data-platform/compare/2.12.1...2.13.0) (2026-08-11)
 
 

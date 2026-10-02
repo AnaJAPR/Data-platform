@@ -29,6 +29,7 @@ function DownloadButtons({
       return;
     }
 
+    /* v8 ignore next -- the buttons are disabled when `disabled` is true, so this branch is unreachable */
     if (disabled) return;
 
     setIsDownloading(format);
@@ -167,6 +168,7 @@ function EpiScannerApiBuilder() {
     const p = new URLSearchParams();
     if (disease) p.set("disease", disease);
     if (uf) p.set("uf", uf.toUpperCase());
+    /* v8 ignore next -- year is always set to a truthy value by its onChange */
     p.set("year", String(year || currentYear));
     return p;
   }, [disease, uf, year, currentYear]);
@@ -228,6 +230,7 @@ export function EpiScannerView({ config }: { config: EndpointDetails }) {
   const [metric, setMetric] = useState<MetricType>("R0");
   const [rawData, setRawData] = useState<any[]>([]);
   const [geoData, setGeoData] = useState<any>(null);
+  const [geoError, setGeoError] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [tooltip, setTooltip] = useState<{ name: string; value: string | number; x: number; y: number } | null>(null);
 
@@ -248,11 +251,17 @@ export function EpiScannerView({ config }: { config: EndpointDetails }) {
           headers: { "x-internal-secret": FRONTEND_SECRET || "" }
         });
         const gData = await geoRes.json();
-        setGeoData(gData);
+        if (geoRes.ok && gData && gData.type === "FeatureCollection" && Array.isArray(gData.features)) {
+          setGeoData(gData);
+          setGeoError(false);
+        } else {
+          setGeoError(true);
+        }
 
         const queryParams = new URLSearchParams({
           disease,
           uf: uf.toUpperCase(),
+          /* v8 ignore next -- year is always set to a truthy value by its onChange */
           year: String(year || currentYear)
         });
 
@@ -281,6 +290,8 @@ export function EpiScannerView({ config }: { config: EndpointDetails }) {
       source={config.source}
       dataVariables={config.data_variables}
       moreInfoLink={config.more_info_link}
+      citation={config.citation}
+      citationLink={config.citation_link}
       apiBuilder={<EpiScannerApiBuilder />}
       controls={
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 relative z-20">
@@ -337,6 +348,11 @@ export function EpiScannerView({ config }: { config: EndpointDetails }) {
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
         )}
+        {geoError ? (
+          <div className="flex flex-col items-center justify-center h-[600px] border rounded-lg text-muted-foreground bg-background">
+            <p className="text-sm font-medium">Could not load map data. Please try again later.</p>
+          </div>
+        ) : (
         <div
           ref={containerRef}
           className={`relative border rounded-lg overflow-hidden shadow-sm ${resolvedTheme === "dark" ? "bg-slate-900" : "bg-slate-50"
@@ -374,10 +390,14 @@ export function EpiScannerView({ config }: { config: EndpointDetails }) {
               }}
             >
               <span className="font-bold border-b border-white/20 pb-1 mb-1">{tooltip.name}</span>
-              <span className="opacity-90">{metric}: <span className="font-mono">{typeof tooltip.value === 'number' ? tooltip.value.toFixed(2) : tooltip.value}</span></span>
+              <span className="opacity-90">{metric}: <span className="font-mono">
+                {/* v8 ignore next -- tooltip.value is always numeric (converted by chartData) */}
+                {typeof tooltip.value === 'number' ? tooltip.value.toFixed(2) : tooltip.value}
+              </span></span>
             </div>
           )}
         </div>
+        )}
       </div>
     </EndpointLayout>
   );

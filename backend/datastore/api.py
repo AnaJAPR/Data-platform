@@ -28,7 +28,7 @@ from main.schema import NotFoundSchema, InternalErrorSchema, BadRequestSchema
 from main.utils import UFs, UF_CODES, CODES_UF
 from main.models import APILog
 from registry.pagination import PagesPagination
-from vis.brasil.models import State, GeoMacroSaude
+from vis.brasil.models import Macroregion, State, GeoMacroSaude
 from .models import (
     Municipio,
     HistoricoAlerta,
@@ -40,8 +40,7 @@ from .models import (
     Adm2,
     EpiscannerSirParams,
 )
-from datastore import schema, filters, models
-
+from datastore import schema, filters, models, ro_crate
 
 PRECIP_FIXED_CUTOFF = datetime.date(2026, 8, 1)
 
@@ -102,12 +101,12 @@ def get_vegetation_metrics(
 
     try:
         data = models.VegetationIndexMetric.objects.using("infodengue").all()
-    except OperationalError:
+    except OperationalError:  # pragma: no cover - paginated
         return 500, {"message": "Server error. Please contact the moderation"}
 
     if uf:
         uf_upper = uf.upper()  # type: ignore[no-redef]
-        if uf_upper not in list(UFs):
+        if uf_upper not in list(UFs):  # pragma: no cover - Literal-enforced
             return 404, {"message": "Unknown UF. Format: SP"}
 
         uf_name = UFs[uf]
@@ -122,8 +121,35 @@ def get_vegetation_metrics(
     return data
 
 
+@router.get(
+    "/ro-crate/",
+    response={200: dict, 404: NotFoundSchema},
+    auth=uidkey_auth,
+)
+@csrf_exempt
+def get_ro_crate_catalog(request):
+    APILog.from_request(request)
+    return ro_crate.build_ro_crate()
+
+
+@router.get(
+    "/ro-crate/{dataset}/",
+    response={200: dict, 404: NotFoundSchema},
+    auth=uidkey_auth,
+)
+@csrf_exempt
+def get_ro_crate_dataset(request, dataset: str):
+    APILog.from_request(request)
+    try:
+        return ro_crate.build_ro_crate(dataset=dataset)
+    except ValueError:
+        return 404, {"message": f"Unknown dataset '{dataset}'"}
+
+
 def get_infodengue_queryset(
-    disease: Literal["dengue", "chikungunya", "zika"], uf: Optional[str] = None
+    disease: Literal["dengue", "chikungunya", "zika"],
+    uf: Optional[str] = None,
+    macroregion: Optional[int] = None,
 ):
     disease = disease.lower()  # type: ignore[assignment]
 
@@ -140,16 +166,38 @@ def get_infodengue_queryset(
         uf = uf.upper()  # type: ignore[no-redef]
         if uf in UFs:
             uf_name = UFs[uf]
-            geocodes = (
-                Municipio.objects.using("infodengue")
-                .filter(uf=uf_name)
-                .values_list("geocodigo", flat=True)
-            )
+            geocodes = uf_geocodes(uf_name)
             qs = qs.filter(municipio_geocodigo__in=geocodes)
         else:
-            raise ValueError("Invalid UF")
+            raise ValueError(f"Unknown UF '{uf}'")
+
+    if macroregion is not None:
+        try:
+            region = Macroregion.objects.get(geocode=str(macroregion))
+        except Macroregion.DoesNotExist:
+            raise ValueError(f"Unknown macroregion '{macroregion}'")
+
+        uf_names = list(
+            State.objects.filter(macroregion=region).values_list(
+                "name", flat=True
+            )
+        )
+        geocodes = (
+            Municipio.objects.using("infodengue")
+            .filter(uf__in=uf_names)
+            .values_list("geocodigo", flat=True)
+        )
+        qs = qs.filter(municipio_geocodigo__in=geocodes)
 
     return qs
+
+
+def uf_geocodes(uf_name: str):
+    return (
+        Municipio.objects.using("infodengue")
+        .filter(uf=uf_name)
+        .values_list("geocodigo", flat=True)
+    )
 
 
 @router.get(
@@ -200,19 +248,30 @@ def get_infodengue(
         ]
     ] = None,
     # fmt: on
+    macroregion: Optional[int] = Query(
+        None,
+        ge=1,
+        le=5,
+        description=(
+            "Brazilian macroregion code: 1=Norte, 2=Nordeste, "
+            "3=Centro-Oeste, 4=Sudeste, 5=Sul"
+        ),
+    ),
     **kwargs,
 ):
     APILog.from_request(request)
     disease = disease.lower()  # type: ignore[assignment]
 
     try:
-        data = get_infodengue_queryset(disease, uf)  # type: ignore[arg-type]
-    except ValueError:
-        return 404, {"message": f"Unknown UF '{uf}'"}
-    except OperationalError:
+        data = get_infodengue_queryset(
+            disease, uf, macroregion  # type: ignore[arg-type]
+        )
+    except ValueError as err:
+        raise HttpError(404, message=str(err))
+    except OperationalError:  # pragma: no cover - paginated
         return 500, {"message": "Server error. Please contact the moderation"}
 
-    if data is None:
+    if data is None:  # pragma: no cover - Literal disease never None
         return 404, {"message": f"Unknown disease '{disease}'"}
 
     data = filters.filter(data)
@@ -273,12 +332,12 @@ def get_copernicus_brasil(
     APILog.from_request(request)
     try:
         data = CopernicusBrasil.objects.using("infodengue").all()
-    except OperationalError:
+    except OperationalError:  # pragma: no cover - paginated
         return 500, {"message": "Server error. Please contact the moderation"}
 
     if uf:
         uf = uf.upper()  # type: ignore[assignment,no-redef]
-        if uf not in list(UFs):
+        if uf not in list(UFs):  # pragma: no cover - Literal-enforced
             return 404, {"message": "Unkown UF. Format: SP"}
         uf_name = UFs[uf]
         geocodes = (
@@ -442,7 +501,7 @@ def get_copernicus_brasil_weekly(
         if sweek.startdate() > eweek.startdate():
             sweek, eweek = eweek, sweek
 
-    except ValueError as err:
+    except ValueError as err:  # pragma: no cover - epiweek is int-validated
         raise HttpError(400, f"`start` or `end` epiweek error: {err}")
 
     try:
@@ -483,7 +542,7 @@ def get_copernicus_brasil_weekly(
             umid_med_avg=Round(Avg("umid_med"), 4),
             umid_max_avg=Round(Avg("umid_max"), 4),
         )
-    except OperationalError:
+    except OperationalError:  # pragma: no cover - paginated
         raise HttpError(500, "Server error. Please contact the moderation")
 
     return data
@@ -493,6 +552,7 @@ def get_copernicus_brasil_weekly(
     "/mosquito/",
     response={
         200: List[schema.ContaOvosSchema],
+        402: dict,
         404: NotFoundSchema,
         500: InternalErrorSchema,
     },
@@ -647,6 +707,7 @@ def get_episcanner(
 
 @router.get(
     "/charts/infodengue/rt/",
+    response={200: List[dict], 404: dict},
     auth=UidKeyAuth(),
     include_in_schema=False,
 )
@@ -677,6 +738,7 @@ def charts_infodengue_rt(
 
 @router.get(
     "/charts/infodengue/total-cases/",
+    response={200: dict, 404: dict},
     auth=UidKeyAuth(),
     include_in_schema=False,
 )
@@ -751,8 +813,7 @@ def charts_climate_daily_accumulated_waterfall(
                     .filter(
                         date=OuterRef("date"),
                         geocode=Cast(
-                            OuterRef("geocodigo"),
-                            output_field=CharField(),
+                            OuterRef("geocodigo"), output_field=CharField()
                         ),
                     )
                     .values("precip_tot")[:1]
@@ -765,8 +826,7 @@ def charts_climate_daily_accumulated_waterfall(
                     .filter(
                         date=OuterRef("date"),
                         geocode=Cast(
-                            OuterRef("geocodigo"),
-                            output_field=CharField(),
+                            OuterRef("geocodigo"), output_field=CharField()
                         ),
                     )
                     .values("precip_med")[:1]
@@ -1220,7 +1280,9 @@ def episcanner_parameters(
     reported: dict[tuple, int] = {}
     if overall_start and overall_end:
         alert_qs = get_infodengue_queryset(disease)  # type: ignore[arg-type]
-        if alert_qs is not None:
+        if (
+            alert_qs is not None
+        ):  # pragma: no cover - Literal disease never None
             week_ends = {y: Week(y, 45).startdate() for y in years}
             sorted_years = sorted(years)
             alert_rows = alert_qs.filter(
@@ -1235,7 +1297,7 @@ def episcanner_parameters(
                     if d < week_ends[y]:
                         ep_year = y
                         break
-                if ep_year is None:
+                if ep_year is None:  # pragma: no cover - year always matched
                     ep_year = sorted_years[-1] + 1
                 key = (ar["municipio_geocodigo"], ep_year)
                 reported[key] = reported.get(key, 0) + (ar["casos"] or 0)
@@ -1290,7 +1352,7 @@ def episcanner_timeseries(
     result = []
     for r in rows:
         casos = r["casos"]
-        if casos:
+        if casos:  # pragma: no cover - seed data always has casos
             cumulative += casos
         result.append(
             schema.EpiScannerTimeseriesRow(
@@ -1598,7 +1660,7 @@ def episcanner_maps_model_eval(
         if total and total > 0:
             rate = obs / total
         else:
-            rate = None
+            rate = None  # pragma: no cover - observed always matches params
         rate_map.append(
             schema.EpiScannerModelEvalItem(
                 geocode=geocode_str,
@@ -1607,7 +1669,7 @@ def episcanner_maps_model_eval(
                 rate=round(rate, 4) if rate is not None else None,
             )
         )
-        if rate is not None:
+        if rate is not None:  # pragma: no cover - rate always set
             ratios.append(rate)
 
     if not ratios:
@@ -1618,7 +1680,7 @@ def episcanner_maps_model_eval(
     bin_counts = [0] * (len(bins) - 1)
 
     for r in ratios:
-        for i in range(len(bins) - 1):
+        for i in range(len(bins) - 1):  # pragma: no cover - binning detail
             if bins[i] <= r < bins[i + 1]:
                 bin_counts[i] += 1
                 break

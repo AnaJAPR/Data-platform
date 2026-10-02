@@ -18,6 +18,7 @@ VERSION = env("VERSION")
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 SECRET_KEY = env("SECRET_KEY")
+FRONTEND_SECRET = env("FRONTEND_SECRET")
 
 DEBUG = ENV.lower() == "dev"
 
@@ -354,7 +355,7 @@ LOGGING = {
     },
 }
 
-if SENTRY_DSN:
+if SENTRY_DSN:  # pragma: no cover - only active when SENTRY_DSN configured
     import sentry_sdk
     from sentry_sdk.integrations.django import DjangoIntegration
     from sentry_sdk.integrations.celery import CeleryIntegration

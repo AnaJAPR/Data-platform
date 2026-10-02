@@ -18,7 +18,6 @@ CREATE TABLE IF NOT EXISTS "Historico_alerta" (
     "nivel" smallint,
     "versao_modelo" varchar(40),
     "municipio_nome" varchar(128),
-    "tweet" numeric(5,0),
     "Rt" double precision,
     "pop" numeric(10,0),
     "tempmin" numeric(10,2),
@@ -85,11 +84,36 @@ CREATE TABLE IF NOT EXISTS copernicus_bra (
 COPERNICUS_BRASIL_PRECIP_FIXED_DDL = """
 CREATE TABLE IF NOT EXISTS copernicus_bra_precip_tot_fixed (
     "date" date PRIMARY KEY,
-    "geocode" bigint NOT NULL,
+    "geocode" text NOT NULL,
     "precip_min" double precision,
     "precip_med" double precision,
     "precip_max" double precision,
     "precip_tot" double precision
+);
+"""
+
+MUNICIPIO_DDL = """
+CREATE TABLE IF NOT EXISTS "Municipio" (
+    "geocodigo" integer PRIMARY KEY,
+    "nome" varchar,
+    "uf" varchar,
+    "id_regional" integer
+);
+"""
+
+VEGETATION_INDEX_METRICS_DDL = """
+CREATE TABLE IF NOT EXISTS vegetation_index_metrics (
+    "date" date PRIMARY KEY,
+    "geocode" integer,
+    "collection" varchar(255),
+    "attribute" varchar(50),
+    "mean" double precision,
+    "std" double precision,
+    "median" double precision,
+    "q25" double precision,
+    "q75" double precision,
+    "min" double precision,
+    "max" double precision
 );
 """
 
@@ -128,7 +152,18 @@ class SimpleTestRunner(DiscoverRunner):
         cursor.execute(SIR_PARAMS_DDL)
         cursor.execute(COPERNICUS_BRASIL_DDL)
         cursor.execute(COPERNICUS_BRASIL_PRECIP_FIXED_DDL)
+        cursor.execute(MUNICIPIO_DDL)
+        cursor.execute(VEGETATION_INDEX_METRICS_DDL)
         self._seed_test_data(cursor)
+        self._clean_migration_seeds(cursor)
+
+    def _clean_migration_seeds(self, cursor):
+        cursor.execute(
+            "TRUNCATE datastore_adm0, datastore_adm1, datastore_adm2, "
+            "datastore_icd, datastore_disease, brasil_macroregions, "
+            "brasil_states, brasil_mesoregions, brasil_microregions, "
+            "brasil_cities CASCADE"
+        )
 
     def _seed_test_data(self, cursor):
         from datetime import date
@@ -170,7 +205,7 @@ class SimpleTestRunner(DiscoverRunner):
             "ON CONFLICT DO NOTHING",
             [
                 today,
-                3304557,
+                "3304557",
                 1.0,
                 6.0,
                 12.0,

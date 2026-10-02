@@ -11,6 +11,13 @@ jobs:
     environment: build
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    env:
+      ENV: dev
+      VERSION: "2"
     concurrency:
       group: ci-${{ github.ref }}
       cancel-in-progress: true
@@ -61,8 +68,16 @@ jobs:
         cd frontend
         npm install
 
+    - name: Frontend tests (Vitest + coverage)
+      run: |
+        cd frontend
+        npm run test:coverage
+
     - name: Lint
       run: make lint
+
+    - name: Vulture (dead code check)
+      run: make vulture
 
     - name: Setup containers
       id: setup
@@ -75,7 +90,7 @@ jobs:
       id: start
       continue-on-error: true
       run: |
-        sugar compose up --options -d 2>&1 | tee /tmp/container-start.log
+        make up 2>&1 | tee /tmp/container-start.log
 
     - name: Collect errors
       if: steps.start.outcome != 'success'
@@ -83,7 +98,7 @@ jobs:
         echo "::group::Container Start Errors (only relevant lines)"
         echo ""
         echo "--- Failed / Unhealthy Services ---"
-        sugar compose ps --options "-a" 2>/dev/null | grep -E "Exit|unhealthy|starting" || echo "(no containers running)"
+        docker compose -f docker-compose.dev.yaml ps -a 2>/dev/null | grep -E "Exit|unhealthy|starting" || echo "(no containers running)"
         echo ""
         echo "--- Error Lines ---"
         grep -iE 'error[^a-z]|fatal|traceback|exception|denied|failed to|cannot|could not|invalid' /tmp/container-start.log | head -40
@@ -93,8 +108,39 @@ jobs:
 
     - name: Migration check
       run: |
-        sugar compose exec --service backend --options "-T" --cmd "python manage.py makemigrations --check --dry-run"
+        make migration-check
 
-    - name: Test
+    - name: Install coverage
       run: |
-        make test SUGAR=true
+        make coverage-install
+
+    - name: Test with coverage
+      run: |
+        set -o pipefail
+        make test-cov 2>&1 | tee /tmp/coverage.log
+
+    - name: Verify tests actually ran
+      if: always()
+      run: |
+        echo "::group::Coverage report"
+        grep -E "Name|TOTAL|registry" /tmp/coverage.log | tail -30 || true
+        echo "::endgroup::"
+        if ! grep -qE "Ran [0-9]+ tests" /tmp/coverage.log; then
+          echo "::error::The backend test run produced no test results (Ran N tests missing)."
+          echo "This usually means the backend container is missing required env vars"
+          echo "(e.g. SECRET_KEY, FRONTEND_PORT, BACKEND_PORT) so Django cannot load settings"
+          echo "and manage.py exits immediately. Check the 'Test with coverage' step log."
+          exit 1
+        fi
+        if ! grep -q "TOTAL" /tmp/coverage.log; then
+          echo "::error::Coverage report is empty; nothing was measured."
+          exit 1
+        fi
+
+    - name: Upload coverage log
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-log
+        path: /tmp/coverage.log
+        if-no-files-found: ignore
